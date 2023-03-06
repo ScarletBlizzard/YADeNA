@@ -2,9 +2,12 @@
 
 # This script takes reference sequence and generates simulated data based on this sequence for testing the assembler
 
+cd "$(dirname "$0")" # change to dir of this script
+
 ref_file=ref.fa # FASTA/FASTQ file containing reference sequence
 out_dir=out_dir
-read_len=90 # length of a read
+read_len=${1:-90} # length of a read
+ins_len_mean=${2:-170}
 
 PIRS_DIR=${PIRS_DIR:-"/usr/local/share/pirs"} # set path of dir containing pIRS executable if not set already
 alias pirs="${PIRS_DIR}/pirs"
@@ -19,8 +22,10 @@ for gap_len in `seq 200 100 1000`; do
   max_pos=$(($ref_seq_len-$target_seq_len)) # maximal starting position of target sequence
   pos="$(shuf -i 0-"$max_pos" -n 1)" # random starting position of target sequence
   target_seq=${ref_seq:pos:target_seq_len}
-  target_file=${out_dir}/target_${gap_len}.txt # file containing target sequence
+  target_dir=${out_dir}/sim_${gap_len}
+  mkdir -p $target_dir
+  target_file=${target_dir}/target.fq # file containing target sequence
   echo $ref_id $gap_len > $target_file
   echo $target_seq >> $target_file
-  pirs simulate ${target_file} -l ${read_len} -x 5 -m 170 -v 10 -z ${profiles} -o ${out_dir}/sim_${gap_len} >> log.txt 2>>err.txt
+  pirs simulate ${target_file} -l ${read_len} -x 5 -m ${ins_len_mean} -v 10 ${profiles} -o ${target_dir} >> log.txt 2>>err.txt
 done
