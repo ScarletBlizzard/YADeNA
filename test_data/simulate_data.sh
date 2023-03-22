@@ -16,16 +16,19 @@ profiles="-B ${PIRS_DIR}/Profiles/Base-Calling_Profiles/humNew.PE100.matrix.gz -
 ref_id=$(cat ${ref_file} | head -n 1) # id of reference sequence
 ref_seq=$(cat ${ref_file} | head -n 2 | tail -n 1) # reference sequence
 ref_seq_len=${#ref_seq}
+log_file=log.txt
+err_file=err.txt
 # gap_len is length of gap in sequence which is going to be filled by assembler
+rm $log_file $err_file
 for gap_len in `seq 200 100 1000`; do
   target_seq_len=$(($read_len*2 + $gap_len)) # length of resulting (target) sequence (two contigs and filled gap between them)
-  max_pos=$(($ref_seq_len-$target_seq_len)) # maximal starting position of target sequence
+  max_pos=$(($ref_seq_len-$target_seq_len)) # maximum starting position of target sequence
   pos="$(shuf -i 0-"$max_pos" -n 1)" # random starting position of target sequence
   target_seq=${ref_seq:pos:target_seq_len}
   target_dir=${out_dir}/sim_${gap_len}
   mkdir -p $target_dir
   target_file=${target_dir}/target.fq # file containing target sequence
-  echo $ref_id $gap_len > $target_file
+  echo ${ref_id}_${gap_len} > $target_file
   echo $target_seq >> $target_file
-  pirs simulate ${target_file} -l ${read_len} -x 5 -m ${ins_len_mean} -v 10 ${profiles} -o ${target_dir} >> log.txt 2>>err.txt
+  pirs simulate ${target_file} -l ${read_len} -x 5 -m ${ins_len_mean} ${profiles} -o ${target_dir} >> ${log_file} 2>>${err_file}
 done
