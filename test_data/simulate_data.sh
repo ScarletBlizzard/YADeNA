@@ -6,8 +6,8 @@ cd "$(dirname "$0")" # change to dir of this script
 
 ref_file=ref.fa # FASTA/FASTQ file containing reference sequence
 out_dir=out_dir
-read_len=${1:-90} # length of a read
-ins_len_mean=${2:-170}
+read_len=${1:-100} # length of a read
+ins_len_mean=${2:-350}
 
 PIRS_DIR=${PIRS_DIR:-"/usr/local/share/pirs"} # set path of dir containing pIRS executable if not set already
 alias pirs="${PIRS_DIR}/pirs"

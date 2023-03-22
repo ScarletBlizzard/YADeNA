@@ -3,8 +3,8 @@
 # This script runs assembler with data from dir containing test data and reports errors
 
 max_tests_count=${1:-10} # How many times to run assembler with different data
-read_len=${2:-90}
-ins_len_mean=${3:-170}
+read_len=${2:-100}
+ins_len_mean=${3:-350}
 test_data_dir=test_data
 reads_file=${test_data_dir}/.reads.fq # temp file for storing reads
 contigs_file=${test_data_dir}/.contigs.fa # temp file for storing contigs
