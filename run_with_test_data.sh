@@ -20,20 +20,20 @@ for target_dir in ${test_data_dir}/out_dir/*; do
   cat ${target_dir}/Sim_${read_len}_${ins_len_mean}_2.fq >> $reads_file
 
   # Making contigs file
-  echo ">left contig" > $contigs_file
+  echo ">left_contig" > $contigs_file
   echo ${target_seq:0:read_len} >> $contigs_file # append left contig
   right_contig_pos="$((${#target_seq}-$read_len))"
-  echo ">right contig" >> $contigs_file
+  echo ">right_contig" >> $contigs_file
   echo ${target_seq:right_contig_pos:read_len} >> $contigs_file # append right contig
 
   # Running the assembler
-  out=$(python3 assembler.py -rl ${read_len} -r ${reads_file} -c ${contigs_file})
+  out=$(python3 assembler.py ${reads_file} ${contigs_file} -r ${read_len})
 
   # Checking and printing output
   if ! [[ $out == $target_seq ]]; then
-    echo Error on ${target_dir}
+    echo Unexpected output for ${target_dir}
   fi
-  echo $out
+  echo "$out"
   
   ((i++))
   if (( $i > $max_tests_count )); then
