@@ -2,25 +2,43 @@
 
 # This script runs assembler with data from dir containing test data and reports errors
 
-read_len=${1:-90}
-ins_len_mean=${2:-170}
+max_tests_count=${1:-10} # How many times to run assembler with different data
+read_len=${2:-90}
+ins_len_mean=${3:-170}
 test_data_dir=test_data
+reads_file=${test_data_dir}/.reads.fq # temp file for storing reads
+contigs_file=${test_data_dir}/.contigs.fa # temp file for storing contigs
 
+i=1
 for target_dir in ${test_data_dir}/out_dir/*; do
+  # Getting target sequence
   target_file=${target_dir}/target.fq
   target_seq=$(cat ${target_file} | head -n 2 | tail -n 1)
-  left_contig=${target_seq:0:read_len}
-  left_contig_file=${test_data_dir}/left_contig.txt # temp file for storing left contig
-  echo $left_contig > $left_contig_file
+
+  # Making reads file
+  cat ${target_dir}/Sim_${read_len}_${ins_len_mean}_1.fq > $reads_file
+  cat ${target_dir}/Sim_${read_len}_${ins_len_mean}_2.fq >> $reads_file
+
+  # Making contigs file
+  echo ">left contig" > $contigs_file
+  echo ${target_seq:0:read_len} >> $contigs_file # append left contig
   right_contig_pos="$((${#target_seq}-$read_len))"
-  right_contig=${target_seq:right_contig_pos:read_len}
-  right_contig_file=${test_data_dir}/right_contig.txt # temp file for storing right contig
-  echo $right_contig > $right_contig_file
-  left_reads_file=${target_dir}/Sim_${read_len}_${ins_len_mean}_1.fq
-  right_reads_file=${target_dir}/Sim_${read_len}_${ins_len_mean}_2.fq
-  out=$(python3 assembler.py -lr ${left_reads_file} -rr ${right_reads_file} -lc ${left_contig_file} -rc ${right_contig_file})
+  echo ">right contig" >> $contigs_file
+  echo ${target_seq:right_contig_pos:read_len} >> $contigs_file # append right contig
+
+  # Running the assembler
+  out=$(python3 assembler.py -rl ${read_len} -r ${reads_file} -c ${contigs_file})
+
+  # Checking and printing output
   if ! [[ $out == $target_seq ]]; then
     echo Error on ${target_dir}
   fi
   echo $out
+  
+  ((i++))
+  if (( $i > $max_tests_count )); then
+    break
+  fi
 done
+
+rm $reads_file $contigs_file # remove temp files
