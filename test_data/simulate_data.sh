@@ -6,12 +6,11 @@ cd "$(dirname "$0")" # change to dir of this script
 
 ref_file=ref.fa # FASTA/FASTQ file containing reference sequence
 out_dir=out_dir
-read_len=${1:-100} # length of a read
-ins_len_mean=${2:-350}
-
-PIRS_DIR=${PIRS_DIR:-"/usr/local/share/pirs"} # set path of dir containing pIRS executable if not set already
-alias pirs="${PIRS_DIR}/pirs"
-profiles="-B ${PIRS_DIR}/Profiles/Base-Calling_Profiles/humNew.PE100.matrix.gz -I ${PIRS_DIR}/Profiles/InDel_Profiles/phixv2.InDel.matrix -G ${PIRS_DIR}/Profiles/GC-depth_Profiles/humNew.gcdep_100.dat"
+seq_system=${1:-HS25}
+read_len=${2:-150} # length of a read
+mean_fragsize=${3:-200}
+std_fragsize=${4:-10}
+fold_cov=${5:-20}
 
 ref_id=$(cat ${ref_file} | head -n 1) # id of reference sequence
 ref_seq=$(cat ${ref_file} | head -n 2 | tail -n 1) # reference sequence
@@ -27,8 +26,8 @@ for gap_len in `seq 200 100 1000`; do
   target_seq=${ref_seq:pos:target_seq_len}
   target_dir=${out_dir}/sim_${gap_len}
   mkdir -p $target_dir
-  target_file=${target_dir}/target.fq # file containing target sequence
-  echo ${ref_id}_${gap_len} > $target_file
+  target_file=${target_dir}/target.fa # file containing target sequence
+  echo ${ref_id}_${gap_len}_${pos} > $target_file
   echo $target_seq >> $target_file
-  pirs simulate ${target_file} -l ${read_len} -x 5 -m ${ins_len_mean} ${profiles} -o ${target_dir} >> ${log_file} 2>>${err_file}
+  art_illumina -ss ${seq_system} -sam -i ${target_file} -p -l ${read_len} -f ${fold_cov} -m ${mean_fragsize} -s ${std_fragsize} -o ${target_dir}/dat >> log.txt 2>>err.txt
 done
