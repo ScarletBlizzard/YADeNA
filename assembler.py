@@ -71,9 +71,9 @@ def create_overlap_graph(reads, contigs, min_overlap_len):
 
 class WrongPathError(Exception):
     """Raised when last read in path didn't match the read we want."""
-    pass
 
-def traverse(graph, reads, read, last, visited=set()):
+
+def traverse(graph, reads, read, last, visited=None):
     """
     Recursive function that traverses the overlap graph, thus assembling the
     target sequence. Uses greedy approach.
@@ -82,6 +82,8 @@ def traverse(graph, reads, read, last, visited=set()):
     last in path and set of visited reads.
     Returns target sequence.
     """
+    if visited is None:
+        visited = set()
     visited.add(read.id)
     descendants = sorted(graph[read.id], key=lambda x: x[1])
     while len(descendants) > 0:
