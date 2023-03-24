@@ -128,9 +128,9 @@ def main():
 
     graph = create_overlap_graph(reads, contigs, args.min_overlap_len or args.read_len//15)
 
-    reads = {**reads, **contigs} # treat contigs like reads
-    first, last = contigs.values()
-    return traverse(graph, reads, first, last)
+    (l_cont_id, l_cont), (r_cont_id, r_cont), *_ = contigs.items()
+    reads[l_cont_id], reads[r_cont_id] = l_cont, r_cont # treat contigs like reads
+    return traverse(graph, reads, l_cont, r_cont)
 
 
 if __name__ == '__main__':
