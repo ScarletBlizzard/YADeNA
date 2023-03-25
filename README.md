@@ -1,1 +1,2 @@
-# yet-another-de-novo-assembler
+# YADeNA
+Yet Another De Novo Assembler
