@@ -22,7 +22,7 @@ def create_parser():
                         help='Length of a read')
     parser.add_argument('-o', '--min_overlap_len', type=int,
                         help='Minimum length of reads overlap')
-    parser.add_argument('-a', '--alignments_type', choices='art',
+    parser.add_argument('-a', '--alignments_type', choices=['art'],
                         help='Minimum length of reads overlap')
     return parser
 
