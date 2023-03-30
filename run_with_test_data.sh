@@ -9,6 +9,12 @@ reads_file=${test_data_dir}/.reads.fq # temp file for storing reads
 contigs_file=${test_data_dir}/.contigs.fa # temp file for storing contigs
 alignments_file=${test_data_dir}/.alignments.aln # temp file for storing contigs
 
+# Workaround for running assembler.py with Python 3 both on Linux and Windows
+python3_cmd=python
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  python3_cmd=python3
+fi
+
 i=1
 for target_dir in ${test_data_dir}/out_dir/*; do
   # Getting target sequence
@@ -31,7 +37,7 @@ for target_dir in ${test_data_dir}/out_dir/*; do
   grep -o '^>.*' ${target_dir}/dat2.aln >> $alignments_file
 
   # Running the assembler
-  out=$(python3 assembler.py ${reads_file} ${contigs_file} ${alignments_file} -r ${read_len} -a art)
+  out=$(${python3_cmd} assembler.py ${reads_file} ${contigs_file} ${alignments_file} -r ${read_len} -a art)
 
   # Checking and printing output
   if [[ $out != $target_seq ]]; then
