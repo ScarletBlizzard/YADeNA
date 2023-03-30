@@ -128,7 +128,7 @@ def main():
         orientation = util.parse_art_orientation(args.alignments_file)
         orient(reads, orientation)
 
-    graph = create_overlap_graph(reads, contigs, args.min_overlap_len or args.read_len//15)
+    graph = create_overlap_graph(reads, contigs, args.min_overlap_len or args.read_len//2)
 
     (l_cont_id, l_cont), (r_cont_id, r_cont), *_ = contigs.items()
     reads[l_cont_id], reads[r_cont_id] = l_cont, r_cont # treat contigs like reads
