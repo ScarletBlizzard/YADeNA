@@ -19,7 +19,7 @@ i=1
 for target_dir in ${test_data_dir}/out_dir/*; do
   # Getting target sequence
   target_file=${target_dir}/target.fa
-  target_seq=$(cat ${target_file} | head -n 2 | tail -n 1)
+  target_seq=$(cat ${target_file} | tail -n 1)
 
   # Making reads file
   cat ${target_dir}/dat1.fq > $reads_file
