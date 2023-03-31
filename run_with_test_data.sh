@@ -7,7 +7,7 @@ read_len=${2:-150}
 test_data_dir=test_data
 reads_file=${test_data_dir}/.reads.fq # temp file for storing reads
 contigs_file=${test_data_dir}/.contigs.fa # temp file for storing contigs
-alignments_file=${test_data_dir}/.alignments.aln # temp file for storing contigs
+alignments_file=${test_data_dir}/.alignments.aln # temp file for storing alignments
 
 # Workaround for running assembler.py with Python 3 both on Linux and Windows
 python3_cmd=python
