@@ -2,12 +2,15 @@
 
 # This script runs assembler with data from dir containing test data and reports errors
 
-max_tests_count=${1:-10} # How many times to run assembler with different data
+max_tests_cnt=${1:-10} # How many times to run assembler with different data
 read_len=${2:-150}
 test_data_dir=test_data
 reads_file=${test_data_dir}/.reads.fq # temp file for storing reads
 contigs_file=${test_data_dir}/.contigs.fa # temp file for storing contigs
 alignments_file=${test_data_dir}/.alignments.aln # temp file for storing contigs
+
+log=test_runs.log
+rm $log
 
 # Workaround for running assembler.py with Python 3 both on Linux and Windows
 python3_cmd=python
@@ -15,7 +18,8 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   python3_cmd=python3
 fi
 
-i=1
+ran_tests_cnt=0
+successful_cnt=$max_tests_cnt
 for target_dir in ${test_data_dir}/out_dir/*; do
   # Getting target sequence
   target_file=${target_dir}/target.fa
@@ -36,22 +40,28 @@ for target_dir in ${test_data_dir}/out_dir/*; do
   grep -o '^>.*' ${target_dir}/dat1.aln > $alignments_file
   grep -o '^>.*' ${target_dir}/dat2.aln >> $alignments_file
 
-  # Running the assembler
-  out=$(${python3_cmd} assembler.py ${reads_file} ${contigs_file} ${alignments_file} -r ${read_len} -a art)
+  echo [${target_dir}] >> $log
 
-  # Checking and printing output
+  # Running the assembler
+  out=$(${python3_cmd} assembler.py ${reads_file} ${contigs_file} ${alignments_file} -r ${read_len} -a art 2>>${log})
+
   if [[ $out != $target_seq ]]; then
-    echo Unexpected output for ${target_dir}:
+    ((successful_cnt--))
+    echo Unexpected result: >> $log
+    echo "$out" >> $log
+    echo Expected: >> $log
+    echo $target_seq >> $log
   else
-    echo Output for ${target_dir}:
+    echo OK >> $log
   fi
-  echo "$out"
-  echo
+  echo >> $log
   
-  ((i++))
-  if (( $i > $max_tests_count )); then
+  ((ran_tests_cnt++))
+  if (( $ran_tests_cnt > $max_tests_cnt )); then
     break
   fi
 done
+
+echo ${successful_cnt}/${max_tests_cnt} tests ran successfully
 
 rm $reads_file $contigs_file $alignments_file # remove temp files

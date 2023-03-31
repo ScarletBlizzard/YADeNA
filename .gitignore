@@ -1,6 +1,12 @@
+# IDE files
 .vscode/
 .idea/
+
+# Python-related files
 env/
 venv/
 __pycache__/
 *.py[cod]
+
+# Log file created by run_with_test_data.sh
+test_runs.log
