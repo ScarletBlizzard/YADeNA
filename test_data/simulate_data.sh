@@ -24,7 +24,7 @@ for gap_len in `seq 200 100 1000`; do
   max_pos=$(($ref_seq_len-$target_seq_len)) # maximum starting position of target sequence
   pos="$(shuf -i 0-"$max_pos" -n 1)" # random starting position of target sequence
   target_seq=${ref_seq:pos:target_seq_len}
-  target_dir=${out_dir}/sim_${gap_len}
+  target_dir=${out_dir}/sim_${read_len}_${gap_len}
   mkdir -p $target_dir
   target_file=${target_dir}/target.fa # file containing target sequence
   echo ${ref_id}_${gap_len}_${pos} > $target_file
