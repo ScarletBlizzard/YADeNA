@@ -1,5 +1,8 @@
+# IDE files
 .vscode/
 .idea/
+
+# Python-related files
 env/
 venv/
 __pycache__/
