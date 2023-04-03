@@ -20,3 +20,17 @@ def parse_art_orientation(aln_files):
                 read_id, read_orientation = '-'.join(read_info[1].split('-')[0:2]), read_info[-1]
                 orientation[read_id] = read_orientation
     return orientation
+
+
+def compute_identity(aligner, seq1, seq2):
+    """
+    Receives Bio.Align.PairwiseAligner and two sequences.
+    Returns the identity of these sequences — measure of their similarity.
+    """
+    s1, s2 = next(aligner.align(seq1, seq2))
+    alignment_len = len(s1)
+    match_count = 0
+    for i in range(alignment_len):
+        if s1[i] == s2[i]:
+            match_count += 1
+    return match_count / alignment_len
