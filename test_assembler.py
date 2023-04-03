@@ -81,14 +81,14 @@ def test():
             if result_seq == target_seq:
                 correct_cnt += 1
                 if not args.summary:
-                    print('OK')
+                    print('OK: resulting and target sequences match exactly')
             else:
                 wrong_cnt += 1
                 if not args.summary:
-                    print('Error: Unexpected result')
+                    print('Warning: resulting and target sequences differ')
+                    print(f'- Identity: {util.compute_identity(aligner, target_seq, result_seq)}')
                     print(f'- Result: {result_seq}')
                     print(f'- Target: {target_seq}')
-                    print(f'- Identity of target and result sequences: {util.compute_identity(aligner, target_seq, result_seq)}')
         except assembler.WrongPathError:
             failed_cnt += 1
             if not args.summary:
