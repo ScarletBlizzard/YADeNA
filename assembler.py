@@ -12,6 +12,8 @@ def create_parser():
     parser = ArgumentParser()
     # Required arguments
     required = parser.add_argument_group('required named arguments')
+    required.add_argument('-r', '--read_len', required=True, type=int,
+                        help='Length of a read')
     required.add_argument('-r1', '--reads1', required=True,
                         help='File containing reads in FASTQ format')
     required.add_argument('-r2', '--reads2', required=True,
@@ -25,8 +27,9 @@ def create_parser():
     required.add_argument('-a2', '--alignments2', required=True,
                         help='File containing read alignments')
     # Optional arguments
-    parser.add_argument('-l', '--read_len', type=int, default=100,
-                        help='Length of a read')
+    parser.add_argument('-d', '--read_len_divisor', type=int, default=3,
+                        help=('How many times the minimum overlap length is smaller'
+                        'than the read length (used when min_overlap_len not given)'))
     parser.add_argument('-o', '--min_overlap_len', type=int,
                         help='Minimum length of reads overlap')
     parser.add_argument('-at', '--alignments_type', choices=['art'],
@@ -119,8 +122,25 @@ def orient(reads, orientation):
             r.seq = r.seq.reverse_complement()
 
 
+def assemble(reads, contigs, orientation, read_len, read_len_divisor, min_overlap_len=None):
+    """Returns target sequence based on args."""
+    if len(contigs) != 2:
+        raise ValueError('contigs_file must contain only left and right contigs in FASTA format (left goes first)')
+    if ids := set(reads) & set(contigs): # check for duplicate ids
+        raise ValueError(f'Some reads and contigs have the same ids: {*ids,}')
+
+    if orientation:
+        orient(reads, orientation)
+
+    graph = create_overlap_graph(reads, contigs, min_overlap_len or read_len//read_len_divisor)
+
+    (l_cont_id, l_cont), (r_cont_id, r_cont), *_ = contigs.items()
+    reads[l_cont_id], reads[r_cont_id] = l_cont, r_cont # treat contigs like reads
+    return traverse(graph, reads, l_cont, r_cont)
+
+
 def main():
-    """Returns target sequence."""
+    """Returns target sequence based on command line args."""
     parser = create_parser()
     args = parser.parse_args()
 
@@ -128,20 +148,13 @@ def main():
              **SeqIO.to_dict(SeqIO.parse(args.reads2, 'fastq'))}
     contigs = {**SeqIO.to_dict(SeqIO.parse(args.contig1, 'fasta')),
                **SeqIO.to_dict(SeqIO.parse(args.contig2, 'fasta'))}
-    if len(contigs) != 2:
-        raise ValueError('contigs_file must contain only left and right contigs in FASTA format (left goes first)')
-    if ids := set(reads) & set(contigs): # check for duplicate ids
-        raise ValueError(f'Some reads and contigs have the same ids: {*ids,}')
 
+    orientation = None
     if args.alignments_type == 'art':
         orientation = util.parse_art_orientation((args.alignments1, args.alignments2))
-        orient(reads, orientation)
 
-    graph = create_overlap_graph(reads, contigs, args.min_overlap_len or args.read_len//2)
-
-    (l_cont_id, l_cont), (r_cont_id, r_cont), *_ = contigs.items()
-    reads[l_cont_id], reads[r_cont_id] = l_cont, r_cont # treat contigs like reads
-    return traverse(graph, reads, l_cont, r_cont)
+    return assemble(reads, contigs, orientation, args.read_len, args.read_len_divisor,
+                    min_overlap_len=args.min_overlap_len)
 
 
 if __name__ == '__main__':
