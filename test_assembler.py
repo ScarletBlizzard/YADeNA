@@ -18,7 +18,10 @@ def create_parser():
     parser.add_argument('-r', '--read_len', type=int,
                         help='Only assemble sequences with reads of this '
                              'length')
-    parser.add_argument('-g', '--max_gap_len', type=int,
+    parser.add_argument('-mng', '--min_gap_len', type=int,
+                        help='Only assemble sequences with gaps of length '
+                             'greater or equal to this')
+    parser.add_argument('-mxg', '--max_gap_len', type=int,
                         help='Only assemble sequences with gaps of length '
                              'shorter or equal to this')
     parser.add_argument('-d', '--read_len_divisor', type=int, default=3,
@@ -66,6 +69,7 @@ def test():
         # Expecting data_dir to be like 'sim_{read_len}_{gap_len}'
         read_len, gap_len = map(int, data_dir.split('_')[1:3])
         if (args.read_len and read_len != args.read_len
+                or args.min_gap_len and gap_len < args.min_gap_len
                 or args.max_gap_len and gap_len > args.max_gap_len):
             continue
         tests_cnt += 1
