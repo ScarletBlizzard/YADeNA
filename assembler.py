@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from collections import defaultdict
+import heapq
 import itertools
 
 from Bio import SeqIO
@@ -66,18 +67,19 @@ def create_overlap_graph(reads, contigs, min_overlap_len):
         if r1.seq != r2.seq:
             o_len = overlap_len(r1.seq, r2.seq, min_overlap_len)
             if o_len > 0:
-                graph[r1.id].append((r2.id, o_len))
+                # Pushing negative o_len because heapq makes min heap
+                heapq.heappush(graph[r1.id], (-o_len, r2.id))
 
     c1, c2 = contigs.values()
     for r in reads.values():
         # Find overlaps between suffix of left contig and prefixes of reads
         o_len = overlap_len(c1.seq, r.seq, min_overlap_len)
         if o_len > 0:
-            graph[c1.id].append((r.id, o_len))
+            heapq.heappush(graph[c1.id], (-o_len, r.id))
         # Find overlaps between prefix of right contig and suffixes of reads
         o_len = overlap_len(r.seq, c2.seq, min_overlap_len)
         if o_len > 0:
-            graph[r.id].append((c2.id, o_len))
+            heapq.heappush(graph[r.id], (-o_len, c2.id))
     return graph
 
 
@@ -97,9 +99,11 @@ def traverse(graph, reads, read, last, visited=None):
     if visited is None:
         visited = set()
     visited.add(read.id)
-    descendants = sorted(graph[read.id], key=lambda x: x[1])
-    while len(descendants) > 0:
-        read_id, o_len = descendants.pop()
+    descendants = graph[read.id]
+    while descendants:
+        desc = heapq.heappop(descendants)
+        o_len, read_id = -desc[0], desc[1]
+
         if read_id in visited:
             continue
         try:
