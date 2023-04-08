@@ -18,6 +18,9 @@ def create_parser():
     parser.add_argument('-r', '--read_len', type=int,
                         help='Only assemble sequences with reads of this '
                              'length')
+    parser.add_argument('-g', '--max_gap_len', type=int,
+                        help='Only assemble sequences with gaps of length '
+                             'shorter or equal to this')
     parser.add_argument('-d', '--read_len_divisor', type=int, default=3,
                         help=('How many times the minimum overlap length is '
                               'smaller than the read length '
@@ -36,19 +39,21 @@ def test():
     parser = create_parser()
     args = parser.parse_args()
 
-    description = ['Assembling simulated sequences']
+    description = ['Assembling simulated sequences with parameters:']
     if not args.read_len:
-        description.append('of any length')
+        description.append('read_len = any')
     else:
-        description.append(f'only of length {args.read_len}')
+        description.append('read_len = %d' % args.read_len)
+    if not args.max_gap_len:
+        description.append('max_gap_len = any')
+    else:
+        description.append('max_gap_len = %d' % args.max_gap_len)
     if not args.min_overlap_len:
-        description.append(' '.join(('with minimum overlap length',
-                                     str(args.read_len_divisor),
-                                     'times smaller than the read length')))
+        description.append('min_overlap_len = read_len // %d' %
+                           args.read_len_divisor)
     else:
-        description.append('with minimum overlap length ' +
-                           str(args.min_overlap_len))
-    print(' '.join(description), end='\n\n')
+        description.append('min_overlap_len = %d' % args.min_overlap_len)
+    print('\n'.join(description), end='\n\n')
 
     aligner = Align.PairwiseAligner()
     aligner.mode = 'local'
@@ -60,7 +65,8 @@ def test():
 
         # Expecting data_dir to be like 'sim_{read_len}_{gap_len}'
         read_len, gap_len = map(int, data_dir.split('_')[1:3])
-        if args.read_len and args.read_len != read_len:
+        if (args.read_len and read_len != args.read_len
+                or args.max_gap_len and gap_len > args.max_gap_len):
             continue
         tests_cnt += 1
 
@@ -91,12 +97,12 @@ def test():
         }
 
         orientation = util.parse_art_orientation(
-                [f'{data_dir_path}/dat{i}.aln' for i in (1, 2)])
+            [f'{data_dir_path}/dat{i}.aln' for i in (1, 2)])
 
         try:
             result_seq = assembler.assemble(
-                    reads, contigs, orientation, read_len,
-                    args.read_len_divisor, args.min_overlap_len)
+                reads, contigs, orientation, read_len,
+                args.read_len_divisor, args.min_overlap_len)
             if result_seq == target_seq:
                 correct_cnt += 1
                 if not args.summary:
@@ -105,7 +111,7 @@ def test():
                 wrong_cnt += 1
                 if not args.summary:
                     identity = util.compute_identity(
-                            aligner, target_seq, result_seq)
+                        aligner, target_seq, result_seq)
                     print(
                         'Warning: resulting and target sequences differ',
                         f'- Identity: {identity}',
