@@ -12,7 +12,7 @@ import util
 def create_parser():
     """Returns parser for command line arguments."""
     parser = ArgumentParser()
-    parser.add_argument('max_tests_cnt', nargs='?', type=int, default=-1,
+    parser.add_argument('max_tests_cnt', nargs='?', type=int,
                         help=('How many times at most to run assembler with '
                               'different data'))
     parser.add_argument('-r', '--read_len', type=int,
@@ -56,6 +56,8 @@ def test():
                            args.read_len_divisor)
     else:
         description.append('min_overlap_len = %d' % args.min_overlap_len)
+    if args.max_tests_cnt:
+        description.append('max_tests_cnt = %d' % args.max_tests_cnt)
     print('\n'.join(description), end='\n\n')
 
     aligner = Align.PairwiseAligner()
@@ -63,7 +65,7 @@ def test():
 
     tests_cnt = correct_cnt = wrong_cnt = failed_cnt = 0
     for data_dir in os.listdir(args.test_data_dir):
-        if args.max_tests_cnt >= 0 and tests_cnt >= args.max_tests_cnt:
+        if args.max_tests_cnt and tests_cnt >= args.max_tests_cnt:
             break
 
         # Expecting data_dir to be like 'sim_{read_len}_{gap_len}'
