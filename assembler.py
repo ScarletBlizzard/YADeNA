@@ -1,10 +1,9 @@
 from argparse import ArgumentParser
-from collections import defaultdict
-import heapq
 import itertools
 
 from Bio import SeqIO
 
+from overlap_graph import OverlapGraph
 import util
 
 
@@ -61,25 +60,24 @@ def create_overlap_graph(reads, contigs, min_overlap_len):
     Returns overlap graph created in a naive way using hash table.
     """
     # TODO: Use smarter data structure and create graph in a smarter way
-    graph = defaultdict(list)
+    graph = OverlapGraph()
     # Find overlaps between different reads, including between paired-end reads
     for r1, r2 in itertools.permutations(reads.values(), 2):
         if r1.seq != r2.seq:
             o_len = overlap_len(r1.seq, r2.seq, min_overlap_len)
             if o_len > 0:
-                # Pushing negative o_len because heapq makes min heap
-                heapq.heappush(graph[r1.id], (-o_len, r2.id))
+                graph.add_child(r1.id, r2.id, o_len)
 
     c1, c2 = contigs.values()
     for r in reads.values():
         # Find overlaps between suffix of left contig and prefixes of reads
         o_len = overlap_len(c1.seq, r.seq, min_overlap_len)
         if o_len > 0:
-            heapq.heappush(graph[c1.id], (-o_len, r.id))
+            graph.add_child(c1.id, r.id, o_len)
         # Find overlaps between prefix of right contig and suffixes of reads
         o_len = overlap_len(r.seq, c2.seq, min_overlap_len)
         if o_len > 0:
-            heapq.heappush(graph[r.id], (-o_len, c2.id))
+            graph.add_child(r.id, c2.id, o_len)
     return graph
 
 
@@ -99,10 +97,8 @@ def traverse(graph, reads, read, last, visited=None):
     if visited is None:
         visited = set()
     visited.add(read.id)
-    descendants = graph[read.id]
-    while descendants:
-        desc = heapq.heappop(descendants)
-        o_len, read_id = -desc[0], desc[1]
+    while child := graph.get_next_child(read.id):
+        read_id, o_len = child
 
         if read_id in visited:
             continue
