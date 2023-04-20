@@ -2,8 +2,6 @@ from argparse import ArgumentParser
 import os
 
 from Bio import SeqIO, Align
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 
 import assembler
 import util
@@ -92,14 +90,8 @@ def test():
         }
 
         contigs = {
-            'l_cont': SeqRecord(seq=Seq(target_seq[:read_len]),
-                                id='l_cont',
-                                name='l_cont',
-                                description='l_cont'),
-            'r_cont': SeqRecord(seq=Seq(target_seq[len(target_seq)-read_len:]),
-                                id='r_cont',
-                                name='r_cont',
-                                description='r_cont'),
+            **SeqIO.to_dict(SeqIO.parse(f'{data_dir_path}/cont1.fa', 'fasta')),
+            **SeqIO.to_dict(SeqIO.parse(f'{data_dir_path}/cont2.fa', 'fasta'))
         }
 
         orientation = util.parse_art_orientation(

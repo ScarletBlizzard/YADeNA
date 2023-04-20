@@ -29,5 +29,13 @@ for gap_len in `seq 200 100 5000`; do
   target_file=${target_dir}/target.fa # file containing target sequence
   echo ${ref_id}_${gap_len}_${pos} > $target_file
   echo $target_seq >> $target_file
+
+  # Making contig files
+  echo ">left_contig" > ${target_dir}/cont1.fa
+  echo ${target_seq:0:read_len} >> ${target_dir}/cont1.fa # append left contig
+  right_contig_pos="$((${#target_seq}-$read_len))"
+  echo ">right_contig" > ${target_dir}/cont2.fa
+  echo ${target_seq:right_contig_pos:read_len} >> ${target_dir}/cont2.fa # append right contig
+
   art_illumina -ss ${seq_system} -sam -i ${target_file} -p -l ${read_len} -f ${fold_cov} -m ${mean_fragsize} -s ${std_fragsize} -o ${target_dir}/dat >> log.txt 2>>err.txt
 done
