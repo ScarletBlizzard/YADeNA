@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
 import itertools
+import os
+import subprocess
 
 from Bio import SeqIO
 
@@ -27,11 +29,14 @@ def create_parser():
     required.add_argument('-a2', '--alignments2', required=True,
                           help='File containing read alignments')
     # Optional arguments
+    parser.add_argument('-o', '--output',
+                        help='File containing fully assembled sequence')
+
     parser.add_argument('-d', '--read_len_divisor', type=int, default=3,
                         help=('How many times the minimum overlap length is '
                               'smaller than the read length '
                               '(used when min_overlap_len not given)'))
-    parser.add_argument('-o', '--min_overlap_len', type=int,
+    parser.add_argument('-ol', '--min_overlap_len', type=int,
                         help='Minimum length of reads overlap')
     parser.add_argument('-at', '--alignments_type', choices=['art'],
                         help='Name of program that generated alignments files')
@@ -145,25 +150,46 @@ def assemble(
     return traverse(graph, reads, l_con, r_con)
 
 
-def main():
+def main(args):
     """Returns target sequence based on command line args."""
-    parser = create_parser()
-    args = parser.parse_args()
-
-    reads = {**SeqIO.to_dict(SeqIO.parse(args.reads1, 'fastq')),
-             **SeqIO.to_dict(SeqIO.parse(args.reads2, 'fastq'))}
-    contigs = {**SeqIO.to_dict(SeqIO.parse(args.contig1, 'fasta')),
-               **SeqIO.to_dict(SeqIO.parse(args.contig2, 'fasta'))}
+    reads = {**SeqIO.to_dict(SeqIO.parse(args['reads1'], 'fastq')),
+             **SeqIO.to_dict(SeqIO.parse(args['reads2'], 'fastq'))}
+    contigs = {**SeqIO.to_dict(SeqIO.parse(args['contig1'], 'fasta')),
+               **SeqIO.to_dict(SeqIO.parse(args['contig2'], 'fasta'))}
 
     orientation = None
-    if args.alignments_type == 'art':
+    if args['alignments_type'] == 'art':
         orientation = util.parse_art_orientation(
-                (args.alignments1, args.alignments2))
+                (args['alignments1'], args['alignments2']))
 
-    return assemble(
-            reads, contigs, orientation, args.read_len,
-            args.read_len_divisor, min_overlap_len=args.min_overlap_len)
+    seq = assemble(
+            reads, contigs, orientation, args['read_len'],
+            args['read_len_divisor'], min_overlap_len=args['min_overlap_len'])
+
+    pre_consensus_fname = 'pre_consensus.fa'
+    with open(pre_consensus_fname, 'w', encoding='utf-8') as file:
+        file.write('>pre_consensus\n')
+        file.write(seq)
+
+    temp_sam_fname = 'temp.sam'
+    with open(temp_sam_fname, 'w', encoding='utf-8') as sam_file:
+        subprocess.run(['minimap2', '-a', pre_consensus_fname, args['reads1'],
+                        args['reads2'], args['contig1'], args['contig2']
+                        ],
+                       stdout=sam_file, stderr=subprocess.DEVNULL, check=True)
+        os.remove(pre_consensus_fname)
+
+    seq = util.consensus(temp_sam_fname)
+    os.remove(temp_sam_fname)
+    return seq
 
 
 if __name__ == '__main__':
-    print(main())
+    parser = create_parser()
+    args = vars(parser.parse_args())
+    seq = main(args)
+    print(seq)
+    if args['output']:
+        with open(args['output'], 'w', encoding='utf-8') as file:
+            file.write('>output\n')
+            file.write(seq)

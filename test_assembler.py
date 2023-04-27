@@ -26,7 +26,7 @@ def create_parser():
                         help=('How many times the minimum overlap length is '
                               'smaller than the read length '
                               '(used when min_overlap_len not given)'))
-    parser.add_argument('-o', '--min_overlap_len', type=int,
+    parser.add_argument('-ol', '--min_overlap_len', type=int,
                         help='Minimum length of reads overlap')
     parser.add_argument('--test_data_dir', default='test_data/out_dir',
                         help='Directory containing simulated data')
@@ -84,23 +84,20 @@ def test():
         target_file = f'{data_dir_path}/target.fa'
         target_seq = next(SeqIO.parse(target_file, 'fasta')).seq
 
-        reads = {
-            **SeqIO.to_dict(SeqIO.parse(f'{data_dir_path}/dat1.fq', 'fastq')),
-            **SeqIO.to_dict(SeqIO.parse(f'{data_dir_path}/dat2.fq', 'fastq')),
-        }
-
-        contigs = {
-            **SeqIO.to_dict(SeqIO.parse(f'{data_dir_path}/cont1.fa', 'fasta')),
-            **SeqIO.to_dict(SeqIO.parse(f'{data_dir_path}/cont2.fa', 'fasta'))
-        }
-
-        orientation = util.parse_art_orientation(
-            [f'{data_dir_path}/dat{i}.aln' for i in (1, 2)])
-
         try:
-            result_seq = assembler.assemble(
-                reads, contigs, orientation, read_len,
-                args.read_len_divisor, args.min_overlap_len)
+            result_seq = assembler.main({
+                'reads1': f'{data_dir_path}/dat1.fq',
+                'reads2': f'{data_dir_path}/dat2.fq',
+                'contig1': f'{data_dir_path}/cont1.fa',
+                'contig2': f'{data_dir_path}/cont2.fa',
+                'alignments_type': 'art',
+                'alignments1': f'{data_dir_path}/dat1.aln',
+                'alignments2': f'{data_dir_path}/dat2.aln',
+                'read_len': read_len,
+                'read_len_divisor': args.read_len_divisor,
+                'min_overlap_len': args.min_overlap_len,
+                'sam': args.sam
+            })
             if result_seq == target_seq:
                 correct_cnt += 1
                 if not args.summary:
