@@ -142,12 +142,17 @@ def assemble(
     if orientation:
         orient(reads, orientation)
 
-    graph = create_overlap_graph(
-            reads, contigs, min_overlap_len or read_len//read_len_divisor)
-
     (l_con_id, l_con), (r_con_id, r_con), *_ = contigs.items()
     reads[l_con_id], reads[r_con_id] = l_con, r_con  # treat contigs like reads
-    return traverse(graph, reads, l_con, r_con)
+
+    min_overlap_len = min_overlap_len or read_len//read_len_divisor
+    while True:
+        graph = create_overlap_graph(reads, contigs, min_overlap_len)
+        try:
+            seq = traverse(graph, reads, l_con, r_con)
+            return seq
+        except WrongPathError:
+            min_overlap_len -= 1
 
 
 def run(args):
