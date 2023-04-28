@@ -37,6 +37,7 @@ def create_parser():
 
 
 def test():
+    """Function for testing assembler on simulated data."""
     parser = create_parser()
     args = parser.parse_args()
 
@@ -85,7 +86,7 @@ def test():
         target_seq = next(SeqIO.parse(target_file, 'fasta')).seq
 
         try:
-            result_seq = assembler.main({
+            result_seq = assembler.run({
                 'reads1': f'{data_dir_path}/dat1.fq',
                 'reads2': f'{data_dir_path}/dat2.fq',
                 'contig1': f'{data_dir_path}/cont1.fa',
@@ -96,7 +97,6 @@ def test():
                 'read_len': read_len,
                 'read_len_divisor': args.read_len_divisor,
                 'min_overlap_len': args.min_overlap_len,
-                'sam': args.sam
             })
             if result_seq == target_seq:
                 correct_cnt += 1

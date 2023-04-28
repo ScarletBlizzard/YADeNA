@@ -132,7 +132,7 @@ def orient(reads, orientation):
 def assemble(
         reads, contigs, orientation, read_len,
         read_len_divisor, min_overlap_len=None):
-    """Returns target sequence based on args."""
+    """Returns assembled pre-consensus sequence based on args."""
     if len(contigs) != 2:
         raise ValueError(('contigs_file must contain only left and right'
                           'contigs in FASTA format (left goes first)'))
@@ -150,8 +150,8 @@ def assemble(
     return traverse(graph, reads, l_con, r_con)
 
 
-def main(args):
-    """Returns target sequence based on command line args."""
+def run(args):
+    """Returns fully assembled sequence based on args."""
     reads = {**SeqIO.to_dict(SeqIO.parse(args['reads1'], 'fastq')),
              **SeqIO.to_dict(SeqIO.parse(args['reads2'], 'fastq'))}
     contigs = {**SeqIO.to_dict(SeqIO.parse(args['contig1'], 'fasta')),
@@ -184,12 +184,16 @@ def main(args):
     return seq
 
 
-if __name__ == '__main__':
+def main():
     parser = create_parser()
     args = vars(parser.parse_args())
-    seq = main(args)
+    seq = run(args)
     print(seq)
     if args['output']:
         with open(args['output'], 'w', encoding='utf-8') as file:
             file.write('>output\n')
             file.write(seq)
+
+
+if __name__ == '__main__':
+    main()
