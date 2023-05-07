@@ -19,7 +19,7 @@ log_file=log.txt
 err_file=err.txt
 # gap_len is length of gap in sequence which is going to be filled by assembler
 rm $log_file $err_file
-for gap_len in `seq 200 100 5000`; do
+for gap_len in `seq 200 100 1000`; do
   target_seq_len=$(($read_len*2 + $gap_len)) # length of resulting (target) sequence (two contigs and filled gap between them)
   max_pos=$(($ref_seq_len-$target_seq_len)) # maximum starting position of target sequence
   pos="$(shuf -i 0-"$max_pos" -n 1)" # random starting position of target sequence
