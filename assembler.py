@@ -172,20 +172,26 @@ def run(args):
             args['read_len_divisor'], min_overlap_len=args['min_overlap_len'])
 
     pre_consensus_fname = 'pre_consensus.fa'
-    with open(pre_consensus_fname, 'w', encoding='utf-8') as file:
-        file.write('>pre_consensus\n')
-        file.write(seq)
-
     temp_sam_fname = 'temp.sam'
-    with open(temp_sam_fname, 'w', encoding='utf-8') as sam_file:
-        subprocess.run(['minimap2', '-a', pre_consensus_fname, args['reads1'],
-                        args['reads2'], args['contig1'], args['contig2']
-                        ],
-                       stdout=sam_file, stderr=subprocess.DEVNULL, check=True)
-        os.remove(pre_consensus_fname)
+    try:
+        with open(pre_consensus_fname, 'w', encoding='utf-8') as file:
+            file.write('>pre_consensus\n')
+            file.write(seq)
 
-    seq = util.consensus(temp_sam_fname)
-    os.remove(temp_sam_fname)
+        with open(temp_sam_fname, 'w', encoding='utf-8') as sam_file:
+            subprocess.run(['minimap2', '-a', pre_consensus_fname,
+                            args['reads1'], args['reads2'],
+                            args['contig1'], args['contig2']
+                            ],
+                           stdout=sam_file,
+                           stderr=subprocess.DEVNULL,
+                           check=True)
+
+        seq = util.consensus(temp_sam_fname)
+    finally:
+        os.remove(pre_consensus_fname)
+        os.remove(temp_sam_fname)
+
     return seq
 
 
