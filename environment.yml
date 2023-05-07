@@ -9,8 +9,9 @@ dependencies:
   - biopython=1.81=py310h1fa729e_0
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.18.1=h7f98852_0
-  - ca-certificates=2022.12.7=ha878542_0
+  - ca-certificates=2023.5.7=hbcca054_0
   - flake8=6.0.0=pyhd8ed1ab_0
+  - k8=0.2.5=hd03093a_2
   - keyutils=1.6.1=h166bdaf_0
   - krb5=1.20.1=hf9c8cef_0
   - ld_impl_linux-64=2.40=h41732ed_0
@@ -35,6 +36,7 @@ dependencies:
   - libuuid=2.38.1=h0b41bf4_0
   - libzlib=1.2.13=h166bdaf_4
   - mccabe=0.7.0=pyhd8ed1ab_0
+  - minimap2=2.26=h7132678_0
   - ncurses=6.3=h27087fc_1
   - numpy=1.24.3=py310ha4c1d20_0
   - openssl=1.1.1t=h0b41bf4_0
