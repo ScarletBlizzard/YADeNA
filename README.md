@@ -5,18 +5,25 @@ Yet Another De Novo Assembler
 1. Fork and clone the repository
 2. Do your changes
 3. Install [conda](https://docs.conda.io/projects/conda/en/stable/user-guide/install/index.html)
-4. Create conda environment and install dependencies from the ```environment.yml``` file:
+4. Add bioconda channel:
+    ```
+    conda config --add channels defaults
+    conda config --add channels bioconda
+    conda config --add channels conda-forge
+    conda config --set channel_priority strict
+    ```
+5. Create conda environment and install dependencies from the ```environment.yml``` file:
     ```
     conda env create -n YADeNA -f environment.yml
     ```
-5. Put FASTA file with reference genome into ```test_data/``` directory
-6. Install [ART](https://www.niehs.nih.gov/research/resources/software/biostatistics/art/index.cfm)
-7. Run ```simulate_data.sh```
-8. Activate the environment:
+6. Put FASTA file with reference genome into ```test_data/``` directory
+7. Install [ART](https://www.niehs.nih.gov/research/resources/software/biostatistics/art/index.cfm)
+8. Run ```simulate_data.sh```
+9. Activate the environment:
     ```
     conda activate YADeNA
     ```
-9. Test the program:
+10. Test the program:
     ```
     python test_assembler.py
     ```
@@ -24,4 +31,4 @@ Yet Another De Novo Assembler
     ```
     python assembler.py ...
     ```
-10. Commit, push and do a pull request
+11. Commit, push and do a pull request
