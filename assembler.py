@@ -1,7 +1,6 @@
 from argparse import ArgumentParser
 import itertools
 import os
-import subprocess
 
 from Bio import SeqIO
 
@@ -172,21 +171,15 @@ def run(args):
             args['read_len_divisor'], min_overlap_len=args['min_overlap_len'])
 
     pre_consensus_fname = 'pre_consensus.fa'
+    with open(pre_consensus_fname, 'w', encoding='utf-8') as file:
+        file.write('>pre_consensus\n')
+        file.write(seq)
+
     temp_sam_fname = 'temp.sam'
     try:
-        with open(pre_consensus_fname, 'w', encoding='utf-8') as file:
-            file.write('>pre_consensus\n')
-            file.write(seq)
-
-        with open(temp_sam_fname, 'w', encoding='utf-8') as sam_file:
-            subprocess.run(['minimap2', '-a', pre_consensus_fname,
-                            args['reads1'], args['reads2'],
-                            args['contig1'], args['contig2']
-                            ],
-                           stdout=sam_file,
-                           stderr=subprocess.DEVNULL,
-                           check=True)
-
+        util.align(temp_sam_fname, pre_consensus_fname,
+                   [args['reads1'], args['reads2'],
+                    args['contig1'], args['contig2']])
         seq = util.consensus(temp_sam_fname)
     finally:
         os.remove(pre_consensus_fname)
