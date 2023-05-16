@@ -16,14 +16,15 @@ Yet Another De Novo Assembler
     ```
     conda env create -n YADeNA -f environment.yml
     ```
-6. Put FASTA file with reference genome into ```test_data/``` directory
-7. Install [ART](https://www.niehs.nih.gov/research/resources/software/biostatistics/art/index.cfm)
-8. Run ```simulate_data.sh```
-9. Activate the environment:
+6. Extract ```out_dir.zip``` into ```test_data/``` OR
+    1. Put FASTA file with reference genome into ```test_data/``` directory
+    2. Install [ART](https://www.niehs.nih.gov/research/resources/software/biostatistics/art/index.cfm)
+    3. Run ```simulate_data.sh```
+7. Activate the environment:
     ```
     conda activate YADeNA
     ```
-10. Test the program:
+8. Test the program:
     ```
     python test_assembler.py
     ```
@@ -31,4 +32,4 @@ Yet Another De Novo Assembler
     ```
     python assembler.py ...
     ```
-11. Commit, push and do a pull request
+9. Commit, push and do a pull request
