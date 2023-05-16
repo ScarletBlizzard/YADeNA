@@ -43,14 +43,15 @@ def compute_identity(aligner, seq1, seq2):
     return match_count / alignment_len
 
 
-def align(sam_fname, seq_fname, reads_fnames):
+def align(sam_fname, ref_fname, query_fnames):
     """
-    Receives name of file containing sequence, name of sorted SAM file to
-    create and names of FASTA/FASTQ containing reads which to map onto the
+    Name of sorted SAM file to create, name of FASTA/FASTQ file
+    containing reference sequence and names of FASTA/FASTQ files
+    containing query sequence which to map onto the
     given sequence using minimap2 aligner.
     """
     with open(sam_fname, 'w', encoding='utf-8') as sam_file:
-        subprocess.run(['minimap2', '-a', seq_fname, *reads_fnames],
+        subprocess.run(['minimap2', '-a', ref_fname, *query_fnames],
                        stdout=sam_file,
                        stderr=subprocess.DEVNULL,
                        check=True)
