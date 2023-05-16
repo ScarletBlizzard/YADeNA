@@ -63,7 +63,6 @@ def create_overlap_graph(reads, contigs, min_overlap_len):
     Receives reads, contigs and minimum overlap length.
     Returns overlap graph created in a naive way using hash table.
     """
-    # TODO: Use smarter data structure and create graph in a smarter way
     graph = OverlapGraph()
     # Find overlaps between different reads, including between paired-end reads
     for r1, r2 in itertools.permutations(reads.values(), 2):
