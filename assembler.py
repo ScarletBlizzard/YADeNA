@@ -81,6 +81,9 @@ def create_overlap_graph(reads, contigs, min_overlap_len):
         o_len = overlap_len(r.seq, c2.seq, min_overlap_len)
         if o_len > 0:
             graph.add_child(r.id, c2.id, o_len)
+
+    graph.make_graph_pdf()
+    
     return graph
 
 
