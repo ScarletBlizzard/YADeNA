@@ -22,7 +22,7 @@ def create_parser():
     parser.add_argument('-mxg', '--max_gap_len', type=int,
                         help='Only assemble sequences with gaps of length '
                              'shorter or equal to this')
-    parser.add_argument('-d', '--read_len_divisor', type=int, default=3,
+    parser.add_argument('-d', '--read_len_div', type=int, default=3,
                         help=('How many times the minimum overlap length is '
                               'smaller than the read length '
                               '(used when min_overlap_len not given)'))
@@ -52,7 +52,7 @@ def test():
         description.append('max_gap_len = %d' % args.max_gap_len)
     if not args.min_overlap_len:
         description.append('min_overlap_len = read_len // %d' %
-                           args.read_len_divisor)
+                           args.read_len_div)
     else:
         description.append('min_overlap_len = %d' % args.min_overlap_len)
     if args.max_tests_cnt:
@@ -95,8 +95,9 @@ def test():
                 'alignments1': f'{data_dir_path}/dat1.aln',
                 'alignments2': f'{data_dir_path}/dat2.aln',
                 'read_len': read_len,
-                'read_len_divisor': args.read_len_divisor,
+                'read_len_div': args.read_len_div,
                 'min_overlap_len': args.min_overlap_len,
+                'visualize': False
             })
             if result_seq == target_seq:
                 correct_cnt += 1

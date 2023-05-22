@@ -31,7 +31,7 @@ def create_parser():
     parser.add_argument('-o', '--output',
                         help='File containing fully assembled sequence')
 
-    parser.add_argument('-d', '--read_len_divisor', type=int, default=3,
+    parser.add_argument('-d', '--read_len_div', type=int, default=3,
                         help=('How many times the minimum overlap length is '
                               'smaller than the read length '
                               '(used when min_overlap_len not given)'))
@@ -39,6 +39,10 @@ def create_parser():
                         help='Minimum length of reads overlap')
     parser.add_argument('-at', '--alignments_type', choices=['art'],
                         help='Name of program that generated alignments files')
+    parser.add_argument('-gv', '--visualize',
+                        dest='visualize', action='store_true',
+                        help='Visualize overlap graph using Graphviz')
+    parser.set_defaults(visualize=False)
     return parser
 
 
@@ -58,12 +62,13 @@ def overlap_len(s1, s2, min_len):
         start += 1
 
 
-def create_overlap_graph(reads, contigs, min_overlap_len):
+def create_overlap_graph(reads, contigs, min_overlap_len, visualize):
     """
     Receives reads, contigs and minimum overlap length.
     Returns overlap graph created in a naive way using hash table.
     """
-    graph = OverlapGraph()
+    graph = OverlapGraph(name='YADeNA', visualize=visualize)
+
     # Find overlaps between different reads, including between paired-end reads
     for r1, r2 in itertools.permutations(reads.values(), 2):
         if r1.seq != r2.seq:
@@ -82,8 +87,8 @@ def create_overlap_graph(reads, contigs, min_overlap_len):
         if o_len > 0:
             graph.add_child(r.id, c2.id, o_len)
 
-    graph.make_graph_pdf()
-    
+    graph.visualize()
+
     return graph
 
 
@@ -131,8 +136,8 @@ def orient(reads, orientation):
 
 
 def assemble(
-        reads, contigs, orientation, read_len,
-        read_len_divisor, min_overlap_len=None):
+        reads, contigs, orientation, read_len, read_len_div,
+        visualize, min_overlap_len=None):
     """Returns assembled pre-consensus sequence based on args."""
     if len(contigs) != 2:
         raise ValueError(('contigs_file must contain only left and right'
@@ -146,9 +151,10 @@ def assemble(
     (l_con_id, l_con), (r_con_id, r_con), *_ = contigs.items()
     reads[l_con_id], reads[r_con_id] = l_con, r_con  # treat contigs like reads
 
-    min_overlap_len = min_overlap_len or read_len//read_len_divisor
+    min_overlap_len = min_overlap_len or read_len//read_len_div
     while True:
-        graph = create_overlap_graph(reads, contigs, min_overlap_len)
+        graph = create_overlap_graph(reads, contigs,
+                                     min_overlap_len, visualize)
         try:
             seq = traverse(graph, reads, l_con, r_con)
             return seq
@@ -169,8 +175,9 @@ def run(args):
                 (args['alignments1'], args['alignments2']))
 
     seq = assemble(
-            reads, contigs, orientation, args['read_len'],
-            args['read_len_divisor'], min_overlap_len=args['min_overlap_len'])
+            reads, contigs, orientation,
+            args['read_len'], args['read_len_div'],
+            args['visualize'], min_overlap_len=args['min_overlap_len'])
 
     pre_consensus_fname = 'pre_consensus.fa'
     with open(pre_consensus_fname, 'w', encoding='utf-8') as file:

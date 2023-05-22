@@ -1,18 +1,23 @@
 from collections import defaultdict
 import heapq
+
 import graphviz
 
 
 class OverlapGraph:
-    def __init__(self):
+    def __init__(self, name='', visualize=False):
         self.__graph = defaultdict(list)
-        self.__graph_visualize = graphviz.Digraph("YADeNA graph")
+        self.__visualize = visualize
+        if self.__visualize:
+            self.__name = name + '_graph.gv'
+            self.__graph_visualizer = graphviz.Digraph(self.__name)
 
     def add_child(self, parent_id: str, child_id: str, overlap_len: int):
         heapq.heappush(self.__graph[parent_id], (-overlap_len, child_id))
-        self.__graph_visualize.node(parent_id, parent_id)
-        self.__graph_visualize.node(child_id, child_id)
-        self.__graph_visualize.edge(parent_id, child_id)
+        if self.__visualize:
+            self.__graph_visualizer.node(parent_id, parent_id)
+            self.__graph_visualizer.node(child_id, child_id)
+            self.__graph_visualizer.edge(parent_id, child_id)
 
     def get_next_child(self, parent_id):
         try:
@@ -21,5 +26,6 @@ class OverlapGraph:
         except IndexError:
             return None
 
-    def make_graph_pdf(self):
-        self.__graph_visualize.render("YADeNA_graph", view=False)
+    def visualize(self):
+        if self.__visualize:
+            self.__graph_visualizer.render(self.__name, view=False)

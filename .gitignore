@@ -7,3 +7,7 @@ env/
 venv/
 __pycache__/
 *.py[cod]
+
+# Graphviz-generated files
+*.gv
+*.gv.*
