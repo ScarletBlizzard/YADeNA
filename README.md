@@ -24,7 +24,8 @@ Yet Another De Novo Assembler
     ```
     conda activate YADeNA
     ```
-8. Test the program:
+8. Make your changes and, if necessary, install or remove packages using conda
+9. Test the program:
     ```
     python test_assembler.py
     ```
@@ -32,4 +33,8 @@ Yet Another De Novo Assembler
     ```
     python assembler.py ...
     ```
-9. Commit, push and do a pull request
+10. Before committing, if you installed or removed packages, run the command
+    ```
+    conda env export > environment.yml
+    ```
+11. Commit, push and do a pull request
