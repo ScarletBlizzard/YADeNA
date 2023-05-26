@@ -87,8 +87,6 @@ def create_overlap_graph(reads, contigs, min_overlap_len, visualize):
         if o_len > 0:
             graph.add_child(r.id, c2.id, o_len)
 
-    graph.visualize()
-
     return graph
 
 
@@ -115,11 +113,13 @@ def traverse(graph, reads, read, last, visited=None):
             continue
         try:
             res = traverse(graph, reads, reads[read_id], last, visited)
+            graph.mark(read.id, read_id, o_len)
             return str(read.seq) + res[o_len:]
         except WrongPathError:
             continue
     if read.id != last.id:
         raise WrongPathError
+    graph.mark(last.id)
     return str(last.seq)
 
 
@@ -157,6 +157,7 @@ def assemble(
                                      min_overlap_len, visualize)
         try:
             seq = traverse(graph, reads, l_con, r_con)
+            graph.visualize()
             return seq
         except WrongPathError:
             min_overlap_len -= 1
