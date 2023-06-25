@@ -1,49 +1,6 @@
-from argparse import ArgumentParser
 import itertools
-import os
-
-from Bio import SeqIO
 
 from overlap_graph import OverlapGraph
-import util
-
-
-def create_parser():
-    """Returns parser for command line arguments."""
-    parser = ArgumentParser()
-    # Required arguments
-    required = parser.add_argument_group('required named arguments')
-    required.add_argument('-r', '--read_len', required=True, type=int,
-                          help='Length of a read')
-    required.add_argument('-r1', '--reads1', required=True,
-                          help='File containing reads in FASTQ format')
-    required.add_argument('-r2', '--reads2', required=True,
-                          help='File containing reads in FASTQ format')
-    required.add_argument('-c1', '--contig1', required=True,
-                          help='File containing left contig in FASTA format')
-    required.add_argument('-c2', '--contig2', required=True,
-                          help='File containing right contig in FASTA format')
-    required.add_argument('-a1', '--alignments1', required=True,
-                          help='File containing read alignments')
-    required.add_argument('-a2', '--alignments2', required=True,
-                          help='File containing read alignments')
-    # Optional arguments
-    parser.add_argument('-o', '--output',
-                        help='File containing fully assembled sequence')
-
-    parser.add_argument('-d', '--read_len_div', type=int, default=3,
-                        help=('How many times the minimum overlap length is '
-                              'smaller than the read length '
-                              '(used when min_overlap_len not given)'))
-    parser.add_argument('-ol', '--min_overlap_len', type=int,
-                        help='Minimum length of reads overlap')
-    parser.add_argument('-at', '--alignments_type', choices=['art'],
-                        help='Name of program that generated alignments files')
-    parser.add_argument('-gv', '--visualize',
-                        dest='visualize', action='store_true',
-                        help='Visualize overlap graph using Graphviz')
-    parser.set_defaults(visualize=False)
-    return parser
 
 
 def overlap_len(s1, s2, min_len):
@@ -62,30 +19,31 @@ def overlap_len(s1, s2, min_len):
         start += 1
 
 
-def create_overlap_graph(reads, contigs, min_overlap_len, visualize):
+def create_overlap_graph(reads, contigs, min_overlap_len,
+                         visualize, graph_name):
     """
     Receives reads, contigs and minimum overlap length.
-    Returns overlap graph created in a naive way using hash table.
+    Returns overlap graph created using hash table.
     """
-    graph = OverlapGraph(name='YADeNA', visualize=visualize)
+    graph = OverlapGraph(name=graph_name, visualize=visualize)
 
     # Find overlaps between different reads, including between paired-end reads
-    for r1, r2 in itertools.permutations(reads.values(), 2):
-        if r1.seq != r2.seq:
-            o_len = overlap_len(r1.seq, r2.seq, min_overlap_len)
+    for r1, r2 in itertools.permutations(reads, 2):
+        if r1 != r2:
+            o_len = overlap_len(reads[r1], reads[r2], min_overlap_len)
             if o_len > 0:
-                graph.add_child(r1.id, r2.id, o_len)
+                graph.add_child(r1, r2, o_len)
 
-    c1, c2 = contigs.values()
-    for r in reads.values():
+    c1, c2 = contigs.keys()
+    for r in reads:
         # Find overlaps between suffix of left contig and prefixes of reads
-        o_len = overlap_len(c1.seq, r.seq, min_overlap_len)
+        o_len = overlap_len(contigs[c1], reads[r], min_overlap_len)
         if o_len > 0:
-            graph.add_child(c1.id, r.id, o_len)
+            graph.add_child(c1, r, o_len)
         # Find overlaps between prefix of right contig and suffixes of reads
-        o_len = overlap_len(r.seq, c2.seq, min_overlap_len)
+        o_len = overlap_len(reads[r], contigs[c2], min_overlap_len)
         if o_len > 0:
-            graph.add_child(r.id, c2.id, o_len)
+            graph.add_child(r, c2, o_len)
 
     return graph
 
@@ -94,7 +52,7 @@ class WrongPathError(Exception):
     """Raised when last read in path didn't match the read we want."""
 
 
-def traverse(graph, reads, read, last, visited=None):
+def traverse(graph, reads, curr_read_id, last_read_id, visited=None):
     """
     Recursive function that traverses the overlap graph, thus assembling the
     target sequence. Uses greedy approach.
@@ -105,109 +63,40 @@ def traverse(graph, reads, read, last, visited=None):
     """
     if visited is None:
         visited = set()
-    visited.add(read.id)
-    while child := graph.get_next_child(read.id):
-        read_id, o_len = child
+    visited.add(curr_read_id)
+    while child := graph.get_next_child(curr_read_id):
+        next_read_id, o_len = child
 
-        if read_id in visited:
+        if next_read_id in visited:
             continue
         try:
-            res = traverse(graph, reads, reads[read_id], last, visited)
-            graph.mark(read.id, read_id, o_len)
-            return str(read.seq) + res[o_len:]
+            res = traverse(graph, reads, next_read_id, last_read_id, visited)
+            graph.mark(curr_read_id, next_read_id, o_len)
+            return str(reads[curr_read_id]) + res[o_len:]
         except WrongPathError:
             continue
-    if read.id != last.id:
-        raise WrongPathError
-    graph.mark(last.id)
-    return str(last.seq)
+    if curr_read_id != last_read_id:
+        raise WrongPathError('Could not assemble sequence')
+    graph.mark(last_read_id)
+    return str(reads[last_read_id])
 
 
-def orient(reads, orientation):
-    """
-    Receives dict of reads and dict that maps their ids to orientations
-    which are either '+' or '-'. '-' means that the read is reverse complement
-    of original sequence.
-    Modifies reads dict according to orientation.
-    """
-    for r_id, r in reads.items():
-        if orientation[r_id] == '-':
-            r.seq = r.seq.reverse_complement()
+def assemble(reads, contigs, min_overlap_len, visualize, graph_name):
+    """Returns assembled pre-consensus sequence based on arguments."""
+    if len(contigs) not in (1, 2):
+        raise ValueError('Must have one or two contigs for assembly')
 
-
-def assemble(
-        reads, contigs, orientation, read_len, read_len_div,
-        visualize, min_overlap_len=None):
-    """Returns assembled pre-consensus sequence based on args."""
-    if len(contigs) != 2:
-        raise ValueError(('contigs_file must contain only left and right'
-                          'contigs in FASTA format (left goes first)'))
-    if ids := set(reads) & set(contigs):  # check for duplicate ids
-        raise ValueError(f'Some reads and contigs have the same ids: {*ids,}')
-
-    if orientation:
-        orient(reads, orientation)
-
-    (l_con_id, l_con), (r_con_id, r_con), *_ = contigs.items()
-    reads[l_con_id], reads[r_con_id] = l_con, r_con  # treat contigs like reads
-
-    min_overlap_len = min_overlap_len or read_len//read_len_div
-    while True:
+    contig_ids = list(contigs.keys())
+    reads_with_contigs = {**reads, **contigs}
+    min_min_overlap_len = min_overlap_len // 5
+    while True and min_overlap_len > min_min_overlap_len:
         graph = create_overlap_graph(reads, contigs,
-                                     min_overlap_len, visualize)
+                                     min_overlap_len,
+                                     visualize, graph_name)
         try:
-            seq = traverse(graph, reads, l_con, r_con)
+            seq = traverse(graph, reads_with_contigs, *contig_ids)
             graph.visualize()
             return seq
         except WrongPathError:
             min_overlap_len -= 1
-
-
-def run(args):
-    """Returns fully assembled sequence based on args."""
-    reads = {**SeqIO.to_dict(SeqIO.parse(args['reads1'], 'fastq')),
-             **SeqIO.to_dict(SeqIO.parse(args['reads2'], 'fastq'))}
-    contigs = {**SeqIO.to_dict(SeqIO.parse(args['contig1'], 'fasta')),
-               **SeqIO.to_dict(SeqIO.parse(args['contig2'], 'fasta'))}
-
-    orientation = None
-    if args['alignments_type'] == 'art':
-        orientation = util.parse_art_orientation(
-                (args['alignments1'], args['alignments2']))
-
-    seq = assemble(
-            reads, contigs, orientation,
-            args['read_len'], args['read_len_div'],
-            args['visualize'], min_overlap_len=args['min_overlap_len'])
-
-    pre_consensus_fname = 'pre_consensus.fa'
-    with open(pre_consensus_fname, 'w', encoding='utf-8') as file:
-        file.write('>pre_consensus\n')
-        file.write(seq)
-
-    temp_sam_fname = 'temp.sam'
-    try:
-        util.align(temp_sam_fname, pre_consensus_fname,
-                   [args['reads1'], args['reads2'],
-                    args['contig1'], args['contig2']])
-        seq = util.consensus(temp_sam_fname)
-    finally:
-        os.remove(pre_consensus_fname)
-        os.remove(temp_sam_fname)
-
-    return seq
-
-
-def main():
-    parser = create_parser()
-    args = vars(parser.parse_args())
-    seq = run(args)
-    print(seq)
-    if args['output']:
-        with open(args['output'], 'w', encoding='utf-8') as file:
-            file.write('>output\n')
-            file.write(seq)
-
-
-if __name__ == '__main__':
-    main()
+    return ''

@@ -19,23 +19,15 @@ log_file=log.txt
 err_file=err.txt
 # gap_len is length of gap in sequence which is going to be filled by assembler
 rm $log_file $err_file
-for gap_len in `seq 200 100 1000`; do
-  target_seq_len=$(($read_len*2 + $gap_len)) # length of resulting (target) sequence (two contigs and filled gap between them)
+for target_seq_len in `seq 1000 1000 9000`; do
   max_pos=$(($ref_seq_len-$target_seq_len)) # maximum starting position of target sequence
   pos="$(shuf -i 0-"$max_pos" -n 1)" # random starting position of target sequence
   target_seq=${ref_seq:pos:target_seq_len}
-  target_dir=${out_dir}/sim_${read_len}_${gap_len}
+  target_dir=${out_dir}/sim_${read_len}_${target_seq_len}
   mkdir -p $target_dir
   target_file=${target_dir}/target.fa # file containing target sequence
-  echo ${ref_id}_${gap_len}_${pos} > $target_file
+  echo ${ref_id}_${target_seq_len}_${pos} > $target_file
   echo $target_seq >> $target_file
-
-  # Making contig files
-  echo ">left_contig" > ${target_dir}/cont1.fa
-  echo ${target_seq:0:read_len} >> ${target_dir}/cont1.fa # append left contig
-  right_contig_pos="$((${#target_seq}-$read_len))"
-  echo ">right_contig" > ${target_dir}/cont2.fa
-  echo ${target_seq:right_contig_pos:read_len} >> ${target_dir}/cont2.fa # append right contig
 
   art_illumina -ss ${seq_system} -sam -i ${target_file} -p -l ${read_len} -f ${fold_cov} -m ${mean_fragsize} -s ${std_fragsize} -o ${target_dir}/dat >> log.txt 2>>err.txt
 done
