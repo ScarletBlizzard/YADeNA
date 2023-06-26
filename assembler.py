@@ -19,28 +19,32 @@ def overlap_len(s1, s2, min_len):
         start += 1
 
 
-def create_overlap_graph(reads, contigs, min_overlap_len,
-                         visualize, graph_name):
-    """
-    Receives reads, contigs and minimum overlap length.
-    Returns overlap graph created using hash table.
-    """
+def create_overlap_graph(reads, read_positions, read_len, contigs,
+                         min_overlap_len, visualize, graph_name):
     graph = OverlapGraph(name=graph_name, visualize=visualize)
+    max_distance = read_len - min_overlap_len
 
-    # Find overlaps between different reads, including between paired-end reads
-    for r1, r2 in itertools.permutations(reads, 2):
-        if r1 != r2:
-            o_len = overlap_len(reads[r1], reads[r2], min_overlap_len)
-            if o_len > 0:
-                graph.add_child(r1, r2, o_len)
+    # Find overlaps of reads
+    for r1, r2 in itertools.combinations(reads, 2):
+        if r1 == r2 or read_positions[r2]-read_positions[r1] > max_distance:
+            continue
+        o_len = overlap_len(reads[r1], reads[r2], min_overlap_len)
+        if o_len > 0:
+            graph.add_child(r1, r2, o_len)
 
     c1, c2 = contigs.keys()
+    # Find overlaps between suffix of left contig and prefixes of reads
     for r in reads:
-        # Find overlaps between suffix of left contig and prefixes of reads
+        if read_positions[r]-read_positions[c1] > max_distance:
+            break
         o_len = overlap_len(contigs[c1], reads[r], min_overlap_len)
         if o_len > 0:
             graph.add_child(c1, r, o_len)
-        # Find overlaps between prefix of right contig and suffixes of reads
+
+    # Find overlaps between prefix of right contig and suffixes of reads
+    for r in reversed(reads):
+        if read_positions[c2]-read_positions[r] > max_distance:
+            break
         o_len = overlap_len(reads[r], contigs[c2], min_overlap_len)
         if o_len > 0:
             graph.add_child(r, c2, o_len)
@@ -81,18 +85,18 @@ def traverse(graph, reads, curr_read_id, last_read_id, visited=None):
     return str(reads[last_read_id])
 
 
-def assemble(reads, contigs, min_overlap_len, visualize, graph_name):
+def assemble(reads, read_positions, read_len, contigs,
+             min_overlap_len, visualize, graph_name):
     """Returns assembled pre-consensus sequence based on arguments."""
     if len(contigs) not in (1, 2):
         raise ValueError('Must have one or two contigs for assembly')
 
-    contig_ids = list(contigs.keys())
+    contig_ids = contigs.keys()
     reads_with_contigs = {**reads, **contigs}
     min_min_overlap_len = min_overlap_len // 5
     while True and min_overlap_len > min_min_overlap_len:
-        graph = create_overlap_graph(reads, contigs,
-                                     min_overlap_len,
-                                     visualize, graph_name)
+        graph = create_overlap_graph(reads, read_positions, read_len, contigs,
+                                     min_overlap_len, visualize, graph_name)
         try:
             seq = traverse(graph, reads_with_contigs, *contig_ids)
             graph.visualize()

@@ -134,8 +134,14 @@ class BAMUtil:
         return ''.join(consensus_seq)
 
     def fetch_reads(self, start, stop):
-        reads = {}
+        reads, read_positions = {}, {}
         with pysam.AlignmentFile(self._bam_fname, 'rb') as bam_file:
-            for alignment in bam_file.fetch(self._ref_id, start, stop+1):
-                reads[alignment.query_name] = alignment.query_sequence
-        return reads
+            for pileup_column in bam_file.pileup(self._ref_id, start, stop+1,
+                                                 truncate=False):
+                for pileup_read in pileup_column.pileups:
+                    alignment = pileup_read.alignment
+                    read_id = alignment.query_name
+                    if read_id not in reads:
+                        reads[read_id] = alignment.query_sequence
+                        read_positions[read_id] = alignment.reference_start
+        return reads, read_positions
