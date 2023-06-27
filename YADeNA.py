@@ -149,9 +149,12 @@ def main(args):
 if __name__ == '__main__':
     parser = create_parser()
     args = vars(parser.parse_args())
-    seq = main(args)
-    print(seq)
-    if args['output']:
-        with open(args['output'], 'w', encoding='utf-8') as file:
-            file.write('>output\n')  # TODO: Change this string
-            file.write(seq)
+    try:
+        seq = main(args)
+        print(seq)
+        if args['output']:
+            with open(args['output'], 'w', encoding='utf-8') as file:
+                file.write('>output\n')
+                file.write(seq)
+    except IdentityError as e:
+        print(e)
