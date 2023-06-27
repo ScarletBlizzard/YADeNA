@@ -44,7 +44,7 @@ class Assembler:
                 return seq
             except WrongPathError:
                 self._min_overlap_len -= 1
-        return ''
+        return self._contigs[0]
 
     def _overlap_len(self, s1: str, s2: str):
         """
