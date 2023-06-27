@@ -27,6 +27,7 @@ dependencies:
   - fonts-conda-forge=1=0
   - freetype=2.12.1=hca18f0e_1
   - fribidi=1.0.10=h36c2ea0_0
+  - frozendict=2.3.8=py310h2372a71_0
   - gdk-pixbuf=2.42.10=h6b639ba_2
   - gettext=0.21.1=h27087fc_0
   - giflib=5.2.1=h0b41bf4_3

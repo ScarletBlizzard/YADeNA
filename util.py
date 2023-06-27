@@ -10,6 +10,7 @@ import tempfile
 
 from Bio.Blast.Applications import NcbiblastnCommandline
 from Bio.Blast import NCBIXML
+from frozendict import frozendict
 import pysam
 
 
@@ -144,4 +145,4 @@ class BAMUtil:
                     if read_id not in reads:
                         reads[read_id] = alignment.query_sequence
                         read_positions[read_id] = alignment.reference_start
-        return reads, read_positions
+        return frozendict(reads), read_positions

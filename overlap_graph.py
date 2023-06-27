@@ -5,8 +5,8 @@ import graphviz
 
 
 class OverlapGraph:
-    def __init__(self):
-        self._graph = defaultdict(list)
+    def __init__(self, graph=None):
+        self._graph = graph or defaultdict(list)
 
     def add_child(self, parent_id: str, child_id: str, overlap_len: int):
         heapq.heappush(self._graph[parent_id], (-overlap_len, child_id))
@@ -17,6 +17,9 @@ class OverlapGraph:
             return (child[1], -child[0])
         except IndexError:
             return None
+
+    def __repr__(self):
+        return f'OverlapGraph({self._graph})'
 
 
 class GraphVisualizer:
