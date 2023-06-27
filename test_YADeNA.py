@@ -104,7 +104,8 @@ def test():
                 SeqIO.write(SeqRecord(Seq(result_seq), id='result'),
                             r_file, 'fasta')
                 result_fname = r_file.name
-            identity = util.compute_identity(target_fname, result_fname)
+            identity = util.compute_identity_of_unaligned(
+                    target_fname, result_fname)
             os.remove(result_fname)
             print(f'Identity: {identity}')
             identity_sum += identity

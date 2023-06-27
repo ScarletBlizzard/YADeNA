@@ -12,3 +12,11 @@ err.txt
 *.fa
 *.fastq
 *.fq
+*.fasta.*
+*.fna.*
+*.ffn.*
+*.faa.*
+*.frn.*
+*.fa.*
+*.fastq.*
+*.fq.*

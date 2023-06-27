@@ -8,20 +8,31 @@ import os
 import subprocess
 import tempfile
 
-from Bio.Blast.Applications import NcbiblastnCommandline
+from Bio.Blast.Applications import NcbiblastnCommandline as blastn
 from Bio.Blast import NCBIXML
 from frozendict import frozendict
 import pysam
 
 
-def compute_identity(query_fname, subject_fname):
-    output = NcbiblastnCommandline(
+def compute_identity_of_unaligned(query_fname, subject_fname):
+    output = blastn(
             query=query_fname, subject=subject_fname, outfmt=5)()[0]
     blast_record = NCBIXML.read(StringIO(output))
     for alignment in blast_record.alignments:
         for hsp in alignment.hsps:
             return hsp.identities / hsp.align_length
     return 0
+
+
+def compute_identity(seq1, seq2):
+    if len(seq1) != len(seq2):
+        raise ValueError('Sequences must be aligned and have the same length')
+    match_count = 0
+    alignment_len = len(seq1)
+    for i in range(alignment_len):
+        if seq1[i] == seq2[i]:
+            match_count += 1
+    return match_count / alignment_len
 
 
 def align_SAM(sam_fname, ref_fname, query_fnames):
@@ -71,20 +82,20 @@ class BAMUtil:
         pass
 
     @staticmethod
-    def _prepare_read(read, cigartuples):
-        prepared_read = []
+    def _parse_cigar(seq, cigartuples):
+        prepared_seq = []
         idx = 0
-        for operation, length in cigartuples:
-            match operation:
-                case 0:  # M
-                    prepared_read.append(read[idx:idx+length])
-                    idx += length
-                case 1:  # I
-                    # TODO: Handle insertion?
-                    pass
-                case 2:  # D
-                    prepared_read.append('-'*length)
-        return ''.join(prepared_read)
+        for op, length in cigartuples:
+            if op == 0:  # M
+                prepared_seq.append(seq[idx:idx+length])
+                idx += length
+            elif op == 2:  # D
+                idx += length
+            elif op in (1, 4):  # I or S
+                prepared_seq.append('-'*length)
+            else:
+                print(op)
+        return ''.join(prepared_seq).upper()
 
     def compute_avg_identity(self, start, stop):
         identity_sum = 0
@@ -92,15 +103,12 @@ class BAMUtil:
         with pysam.AlignmentFile(self._bam_fname, 'rb') as bam_file:
             for alignment in bam_file.fetch(self._ref_id, start, stop+1):
                 alignments_count += 1
-                read = BAMUtil._prepare_read(alignment.query_sequence,
-                                             alignment.cigartuples)
-                ref_part = alignment.get_reference_sequence()
-                match_count = 0
-                alignment_len = len(ref_part)
-                for i in range(alignment_len):
-                    if read[i] == ref_part[i]:
-                        match_count += 1
-                identity_sum += match_count / alignment_len
+                if alignment.cigartuples:
+                    ref_part = self._parse_cigar(
+                            alignment.get_reference_sequence(),
+                            alignment.cigartuples)
+                    identity_sum += compute_identity(
+                            alignment.query_sequence, ref_part)
 
         if alignments_count > 0:
             return identity_sum / alignments_count
