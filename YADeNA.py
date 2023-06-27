@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 
 from Bio import SeqIO
 
-import assembler
+from assembler import assemble
 from util import BAMUtil
 
 
@@ -93,6 +93,7 @@ def main(args):
         lcontig_id, rcontig_id = 'left_contig', 'right_contig'
         min_overlap_len = (args['min_overlap_len'] or
                            read_len//args['read_len_div'])
+        visualize = args['visualize']
         seq = []
         start_inner_idx = 0
         if gaps[0][0] == 0:  # starting with a gap
@@ -100,12 +101,12 @@ def main(args):
             reads, read_positions = bam_util.fetch_reads(*gaps[0])
             read_positions[rcontig_id] = gaps[0][1] + 1
             for read_id in reads:
-                part = assembler.assemble(
+                part = assemble(
                         reads, read_positions, read_len,
                         {read_id: reads[read_id],
                          rcontig_id: contigs[0]},
-                        min_overlap_len, args['visualize'],
-                        graph_name='Gap_%d_%d' % gaps[0])
+                        min_overlap_len, visualize,
+                        '%s_%d_%d' % (ref_id, *gaps[0]))
                 if part:
                     seq.append(part)
                     break
@@ -119,24 +120,24 @@ def main(args):
             reads, read_positions = bam_util.fetch_reads(*gaps[i])
             read_positions[lcontig_id] = gaps[i][0] - 1
             read_positions[rcontig_id] = gaps[i][1] + 1
-            seq.append(assembler.assemble(
+            seq.append(assemble(
                     reads, read_positions, read_len,
                     {lcontig_id: contigs[i-start_inner_idx],
                      rcontig_id: contigs[i+1-start_inner_idx]},
-                    min_overlap_len, args['visualize'],
-                    graph_name='Gap_%d_%d' % gaps[i]
+                    min_overlap_len, visualize,
+                    '%s_%d_%d' % (ref_id, *gaps[i])
                     )[cutoff_len:])
 
         if gaps[-1][1] == ref_len-1:  # ending with a gap
             reads, read_positions = bam_util.fetch_reads(*gaps[-1])
             read_positions[lcontig_id] = gaps[-1][0] - 1
             for read_id in reversed(reads):
-                part = assembler.assemble(
+                part = assemble(
                     reads, read_positions, read_len,
                     {lcontig_id: contigs[-1],
                      read_id: reads[read_id]},
-                    min_overlap_len, args['visualize'],
-                    graph_name='Gap_%d_%d' % gaps[-1])
+                    min_overlap_len, visualize,
+                    '%s_%d_%d' % (ref_id, *gaps[-1]))
                 if part:
                     seq.append(part[:len(contigs[-1])])
                     break
