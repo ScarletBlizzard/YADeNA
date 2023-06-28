@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from Bio import SeqIO
 
 from assembler import Assembler
-from util import BAMUtil
+from util import BAMUtil, Alignments
 
 
 def create_parser():
@@ -40,13 +40,45 @@ def create_parser():
     return parser
 
 
-def find_gaps(bam_util, ref_len, read_len, min_avg_identity):
+def compute_identity(read, seq_part, cigartuples):
+    match_count, length = 0, 0
+    i, j, d = 0, 0, 0
+    for op, ln in cigartuples:
+        length += ln
+        if op == 0:  # M
+            for _ in range(ln):
+                if read[i+d] == seq_part[j]:
+                    match_count += 1
+                i += 1
+                j += 1
+        else:
+            i += ln
+            if op == 2:  # D
+                d += ln
+    return match_count / length
+
+
+def compute_avg_identity(bam_util, seq, start, end):
+    identity_sum = 0
+    alignments = bam_util.fetch_alignments(start, end)
+    alignments_count = len(alignments)
+    for aln in alignments.values():
+        if aln.cigartuples:  # TODO: Consider unmapped reads too
+            seq_part = seq[aln.reference_start:aln.reference_end]
+            identity_sum += compute_identity(
+                    aln.query_sequence, seq_part, aln.cigartuples)
+    if alignments_count == 0:
+        return 0
+    return identity_sum / alignments_count
+
+
+def find_gaps(bam_util, seq, read_len, min_avg_identity):
     gaps = []
     window_len = 2 * read_len
     start, step = 0, read_len
-    while start + step < ref_len:
-        end = min(start+window_len-1, ref_len-1)
-        avg_identity = bam_util.compute_avg_identity(start, end)
+    while start + step < len(seq):
+        end = min(start+window_len-1, len(seq)-1)
+        avg_identity = compute_avg_identity(bam_util, seq, start, end)
         if avg_identity < min_avg_identity:
             if not gaps or start-gaps[-1][1] > step+1:
                 gaps.append((start, end))
@@ -57,36 +89,42 @@ def find_gaps(bam_util, ref_len, read_len, min_avg_identity):
     return gaps
 
 
-def get_contigs(bam_util, gaps, ref_len):
+def get_contigs(gaps, consensus_seq):
     if gaps:
         contigs = []
         if gaps[0][0] != 0:  # starting with a contig
-            contigs.append(bam_util.consensus(0, gaps[0][0]-1))
+            contigs.append(consensus_seq[0:gaps[0][0]])
         for i in range(1, len(gaps)):
-            contigs.append(bam_util.consensus(gaps[i-1][1]+1, gaps[i][0]-1))
-        if gaps[-1][1] != ref_len-1:  # ending with a contig
-            contigs.append(bam_util.consensus(gaps[-1][1]+1, ref_len-1))
+            contigs.append(consensus_seq[gaps[i-1][1]+1:gaps[i][0]])
+        if gaps[-1][1] != len(consensus_seq)-1:  # ending with a contig
+            contigs.append(consensus_seq[gaps[-1][1]+1:len(consensus_seq)])
         return contigs
-    return [bam_util.consensus(0, ref_len-1)]
+    return [consensus_seq]
 
 
-class IdentityError(ValueError):
-    pass
+def get_reads_with_positions(alignments: Alignments):
+    reads = {read_id: aln.query_sequence
+             for read_id, aln in alignments.items()}
+    read_positions = {read_id: aln.reference_start for
+                      read_id, aln in alignments.items()}
+    return reads, read_positions
 
 
 def main(args):
     ref_record = next(SeqIO.parse(args['reference'], 'fasta'))
     ref_id, ref_len = ref_record.name, len(ref_record.seq)
     read_len = args['read_len']
-    with BAMUtil(args['reference'], ref_id,
-                 [args['reads1'], args['reads2']]) as bam_util:
+    with BAMUtil(args['reference'], [args['reads1'],
+                 args['reads2']]) as bam_util:
+        consensus_seq = bam_util.consensus()
         gaps = find_gaps(
-                bam_util, ref_len, read_len, args['minid']/100)
-        contigs = get_contigs(bam_util, gaps, ref_len)
+                bam_util, consensus_seq, read_len, args['minid']/100)
+
+        contigs = get_contigs(gaps, consensus_seq)
         if not gaps:
             return contigs[0]
         if not contigs:
-            raise IdentityError(
+            raise ValueError(
                     ('Cannot assemble sequence with given '
                      f'minimum average identity: {args["minid"]}%'))
 
@@ -98,7 +136,8 @@ def main(args):
         start_inner_idx = 0
         if gaps[0][0] == 0:  # starting with a gap
             start_inner_idx = 1
-            reads, read_positions = bam_util.fetch_reads(*gaps[0])
+            alignments = bam_util.fetch_alignments(*gaps[0])
+            reads, read_positions = get_reads_with_positions(alignments)
             for read_id in reads:
                 assembler = Assembler(
                         reads, read_positions, read_len,
@@ -118,7 +157,8 @@ def main(args):
             if i+1-start_inner_idx > len(contigs)-1:
                 break
             cutoff_len = 0 if not seq else len(contigs[i-start_inner_idx])
-            reads, read_positions = bam_util.fetch_reads(*gaps[i])
+            alignments = bam_util.fetch_alignments(*gaps[i])
+            reads, read_positions = get_reads_with_positions(alignments)
             assembler = Assembler(
                     reads, read_positions, read_len,
                     {contig_ids[0]: contigs[i-start_inner_idx],
@@ -129,7 +169,8 @@ def main(args):
             seq.append(assembler.assemble()[cutoff_len:])
 
         if gaps[-1][1] == ref_len-1:  # ending with a gap
-            reads, read_positions = bam_util.fetch_reads(*gaps[-1])
+            alignments = bam_util.fetch_alignments(*gaps[-1])
+            reads, read_positions = get_reads_with_positions(alignments)
             for read_id in reversed(reads):
                 assembler = Assembler(
                         reads, read_positions, read_len,
@@ -149,12 +190,9 @@ def main(args):
 if __name__ == '__main__':
     parser = create_parser()
     args = vars(parser.parse_args())
-    try:
-        seq = main(args)
-        print(seq)
-        if args['output']:
-            with open(args['output'], 'w', encoding='utf-8') as file:
-                file.write('>output\n')
-                file.write(seq)
-    except IdentityError as e:
-        print(e)
+    seq = main(args)
+    print(seq)
+    if args['output']:
+        with open(args['output'], 'w', encoding='utf-8') as file:
+            file.write('>output\n')
+            file.write(seq)

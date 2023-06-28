@@ -1,12 +1,12 @@
 from argparse import ArgumentParser
 import os
 import tempfile
+import traceback
 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from assembler import WrongPathError
 import util
 import YADeNA
 
@@ -109,11 +109,10 @@ def test():
             os.remove(result_fname)
             print(f'Identity: {identity}')
             identity_sum += identity
-        except (WrongPathError, YADeNA.IdentityError) as e:
+        except Exception:
             failed_cnt += 1
             if not args.summary:
-                print('Error: ', end='')
-                print(e)
+                print(traceback.format_exc())
         if not args.summary:
             print()
 

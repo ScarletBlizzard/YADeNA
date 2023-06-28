@@ -1,7 +1,5 @@
 import itertools
 
-from frozendict import frozendict
-
 from overlap_graph import OverlapGraph, GraphVisualizer
 
 
@@ -10,7 +8,7 @@ class WrongPathError(Exception):
 
 
 class Assembler:
-    def __init__(self, sorted_reads: frozendict[str, str],
+    def __init__(self, sorted_reads: dict[str, str],
                  read_positions: dict[str, int], read_len: int,
                  contigs: dict[str, str], contig_positions: tuple[int, ...],
                  min_overlap_len: int, visualize: bool, graph_name: str):
