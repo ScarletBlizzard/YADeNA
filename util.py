@@ -11,6 +11,8 @@ import tempfile
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline as blastn
 from Bio.Blast import NCBIXML
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 from frozendict import frozendict
 import pysam
 
@@ -26,21 +28,6 @@ def compute_identity_of_unaligned(query_fname, subject_fname):
         for hsp in aln.hsps:
             return hsp.identities / hsp.align_length
     return 0
-
-
-def align_SAM(sam_fname, ref_fname, query_fnames):
-    """
-    Name of sorted SAM file to create, name of FASTA/FASTQ file
-    containing reference sequence and names of FASTA/FASTQ files
-    containing query sequence which to map onto the
-    given sequence using minimap2 aligner.
-    """
-    with open(sam_fname, 'w', encoding='utf-8') as sam_file:
-        subprocess.run(['minimap2', '-a', ref_fname, *query_fnames],
-                       stdout=sam_file,
-                       stderr=subprocess.DEVNULL,
-                       check=True)
-    pysam.sort('-o', sam_fname, sam_fname)
 
 
 class BAMUtil:
@@ -65,6 +52,19 @@ class BAMUtil:
         ref_record = next(SeqIO.parse(ref_fname, 'fasta'))
         self._ref_id = ref_record.id
         self._ref = ref_record.seq
+
+    @classmethod
+    def from_ref_str(cls, ref_seq: str, ref_id: str, query_fnames: list[str]):
+        ref_fname = ''
+        with tempfile.NamedTemporaryFile(delete=False, mode='w') as ref_file:
+            SeqIO.write([SeqRecord(seq=Seq(ref_seq), id=ref_id)],
+                        ref_file, 'fasta')
+            ref_fname = ref_file.name
+        return cls(ref_fname, query_fnames)
+
+    def save_sam(self):
+        subprocess.run(['samtools', 'view', '-h',
+                        '-o', 'output.sam', self._bam_fname])
 
     def __enter__(self):
         return self

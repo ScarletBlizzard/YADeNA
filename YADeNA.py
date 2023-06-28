@@ -110,21 +110,26 @@ def get_reads_with_positions(alignments: Alignments):
     return reads, read_positions
 
 
+class CommandArgumentsError(Exception):
+    """Exception raised for errors in the command line args."""
+
+
 def main(args):
     ref_record = next(SeqIO.parse(args['reference'], 'fasta'))
     ref_id, ref_len = ref_record.name, len(ref_record.seq)
     read_len = args['read_len']
+    seq = []
+
     with BAMUtil(args['reference'], [args['reads1'],
                  args['reads2']]) as bam_util:
         consensus_seq = bam_util.consensus()
         gaps = find_gaps(
                 bam_util, consensus_seq, read_len, args['minid']/100)
-
         contigs = get_contigs(gaps, consensus_seq)
         if not gaps:
             return contigs[0]
         if not contigs:
-            raise ValueError(
+            raise CommandArgumentsError(
                     ('Cannot assemble sequence with given '
                      f'minimum average identity: {args["minid"]}%'))
 
@@ -132,7 +137,6 @@ def main(args):
         min_overlap_len = (args['min_overlap_len'] or
                            read_len//args['read_len_div'])
         visualize = args['visualize']
-        seq = []
         start_inner_idx = 0
         if gaps[0][0] == 0:  # starting with a gap
             start_inner_idx = 1
@@ -184,15 +188,22 @@ def main(args):
                     seq.append(part[:len(contigs[-1])])
                     break
 
-        return ''.join(seq)
+    with BAMUtil.from_ref_str(
+            ''.join(seq), 'output',
+            [args['reads1'], args['reads2']]) as bam_util:
+        bam_util.save_sam()
+        return bam_util.consensus()
 
 
 if __name__ == '__main__':
     parser = create_parser()
     args = vars(parser.parse_args())
-    seq = main(args)
-    print(seq)
-    if args['output']:
-        with open(args['output'], 'w', encoding='utf-8') as file:
-            file.write('>output\n')
-            file.write(seq)
+    try:
+        seq = main(args)
+        print(seq)
+        if args['output']:
+            with open(args['output'], 'w', encoding='utf-8') as file:
+                file.write('>output\n')
+                file.write(seq)
+    except CommandArgumentsError as e:
+        print(e)

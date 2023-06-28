@@ -10,4 +10,28 @@ __pycache__/
 
 # Graphviz-generated files
 *.gv
-*.gv.*
+*.pdf
+
+# FASTA/FASTQ files
+*.fasta
+*.fna
+*.ffn
+*.faa
+*.frn
+*.fa
+*.fastq
+*.fq
+*.fasta.*
+*.fna.*
+*.ffn.*
+*.faa.*
+*.frn.*
+*.fa.*
+*.fastq.*
+*.fq.*
+
+# BAM/SAM files
+*.bam
+*.sam
+*.bam.*
+*.sam.*
