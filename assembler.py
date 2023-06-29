@@ -8,28 +8,21 @@ class WrongPathError(Exception):
 
 
 class Assembler:
-    def __init__(self, reads: dict[str, str],
-                 read_positions: dict[str, int], read_len: int,
-                 contigs: dict[str, str], contig_positions: tuple[int, ...],
-                 min_overlap_len: int, visualize: bool, graph_name: str):
+    def __init__(self, reads: dict[str, str], read_len: int,
+                 contigs: dict[str, str], min_overlap_len: int,
+                 visualize: bool, graph_name: str, positions=None):
         if len(contigs) not in (1, 2):
             raise ValueError('Must have one or two contigs for assembly')
 
         self._reads = reads
-        self._read_positions = read_positions
         self._read_len = read_len
         self._min_overlap_len = min_overlap_len
 
         self._contig_ids = tuple(contigs.keys())
         self._contigs = tuple(contigs.values())
-        self._contig_positions = contig_positions
-
-        for contig_id, pos in zip(self._contig_ids, contig_positions):
-            self._read_positions[contig_id] = pos
 
         self._graph_visualizer = GraphVisualizer(
-                    graph_name, read_positions, 'pos: '
-                    ) if visualize else None
+                graph_name, positions, 'pos: ') if visualize else None
 
         self._graph_name = graph_name  # For debug
 
@@ -65,14 +58,10 @@ class Assembler:
 
     def _create_overlap_graph(self):
         self._graph = OverlapGraph()
-        max_dist = self._read_len - self._min_overlap_len
 
         # Find overlaps of reads
-        for r1, r2 in itertools.combinations(self._reads, 2):
-            if self._read_positions[r2]-self._read_positions[r1] > max_dist:
-                continue
-            o_len = self._overlap_len(self._reads[r1],
-                                      self._reads[r2])
+        for r1, r2 in itertools.permutations(self._reads, 2):
+            o_len = self._overlap_len(self._reads[r1], self._reads[r2])
             if o_len > 0:
                 self._graph.add_child(r1, r2, o_len)
                 if self._graph_visualizer:
@@ -80,8 +69,6 @@ class Assembler:
 
         # Find overlaps between suffix of left contig and prefixes of reads
         for r in self._reads:
-            if self._read_positions[r]-self._contig_positions[0] > max_dist:
-                break
             o_len = self._overlap_len(self._contigs[0], self._reads[r])
             if o_len > 0:
                 self._graph.add_child(self._contig_ids[0], r, o_len)
@@ -90,9 +77,7 @@ class Assembler:
                                                      r, str(o_len))
 
         # Find overlaps between prefix of right contig and suffixes of reads
-        for r in reversed(self._reads):
-            if self._contig_positions[1]-self._read_positions[r] > max_dist:
-                break
+        for r in self._reads:
             o_len = self._overlap_len(self._reads[r], self._contigs[1])
             if o_len > 0:
                 self._graph.add_child(r, self._contig_ids[1], o_len)
