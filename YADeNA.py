@@ -41,13 +41,12 @@ def create_parser():
 
 
 def compute_identity(read, seq_part, cigartuples):
-    match_count, length = 0, 0
+    match_count = 0
     i, j, d = 0, 0, 0
     for op, ln in cigartuples:
-        length += ln
         if op == 0:  # M
             for _ in range(ln):
-                if read[i+d] == seq_part[j]:
+                if read[i-d] == seq_part[j+d]:
                     match_count += 1
                 i += 1
                 j += 1
@@ -55,7 +54,7 @@ def compute_identity(read, seq_part, cigartuples):
             i += ln
             if op == 2:  # D
                 d += ln
-    return match_count / length
+    return match_count / i
 
 
 def compute_avg_identity(bam_util, seq, start, end):
