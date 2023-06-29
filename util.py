@@ -5,6 +5,7 @@ itself.
 from collections import Counter
 from io import StringIO
 import os
+from pathlib import Path
 import subprocess
 import tempfile
 
@@ -31,7 +32,7 @@ def compute_identity_of_unaligned(query_fname, subject_fname):
 
 
 class BAMUtil:
-    def __init__(self, ref_fname: str, query_fnames: list[str]):
+    def __init__(self, ref_fname: str, query_fnames: list[str], cleanup=True):
         with tempfile.NamedTemporaryFile(delete=False) as bam_file:
             try:
                 subprocess.check_output(['bwa', 'index', ref_fname],
@@ -44,12 +45,16 @@ class BAMUtil:
             self._bam_fname = bam_file.name
         pysam.sort('-o', self._bam_fname, self._bam_fname)
         pysam.index(self._bam_fname)
+
+        self._ref_fname = ref_fname
         ref_record = next(SeqIO.parse(ref_fname, 'fasta'))
         self._ref_id = ref_record.id
         self._ref_seq = ref_record.seq
+        self._cleanup = cleanup
 
     @classmethod
-    def from_ref_str(cls, ref_seq: str, ref_id: str, query_fnames: list[str]):
+    def from_ref_str(cls, ref_seq: str, ref_id: str,
+                     query_fnames: list[str], cleanup=True):
         if not ref_seq:
             raise ValueError('ref_seq must be a str of non-zero length')
         ref_fname = ''
@@ -57,7 +62,7 @@ class BAMUtil:
             SeqIO.write([SeqRecord(seq=Seq(ref_seq), id=ref_id)],
                         ref_file, 'fasta')
             ref_fname = ref_file.name
-        return cls(ref_fname, query_fnames)
+        return cls(ref_fname, query_fnames, cleanup)
 
     def save_sam(self):
         subprocess.run(['samtools', 'view', '-h',
@@ -67,8 +72,12 @@ class BAMUtil:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        os.remove(self._bam_fname)
-        os.remove(self._bam_fname + '.bai')  # remove index file
+        Path(self._bam_fname).unlink(missing_ok=True)
+        # Removing BAM index file and internal BWA files
+        Path(self._bam_fname + '.bai').unlink(missing_ok=True)
+        if self._cleanup:
+            for ext in ('amb', 'ann', 'bwt', 'fai', 'pac', 'sa'):
+                Path(f'{self._ref_fname}.{ext}').unlink(missing_ok=True)
 
     def consensus(self, start=0, end=None):
         if end is None:

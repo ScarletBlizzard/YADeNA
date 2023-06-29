@@ -84,8 +84,10 @@ def test():
         ref_fname = f'{data_dir_path}/ref.fa'
         ref_id = next(SeqIO.parse(ref_fname, 'fasta')).id
         target_fname = f'{data_dir_path}/target.fa'
+        target_id = next(SeqIO.parse(target_fname, 'fasta')).id
         if not args.summary:
-            print(' | '.join((f'[ {ref_id}',
+            print(' | '.join((f'[ Ref: {ref_id}',
+                              f'Target: {target_id}',
                               f'Read length: {read_len}',
                               f'Sequence length: {seq_len} ]')))
         try:
