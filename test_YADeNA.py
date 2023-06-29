@@ -123,7 +123,8 @@ def test():
     summary.append(f'Assembled: {assembled_cnt}/{tests_cnt}')
     if failed_cnt > 0:
         summary.append(f'Could not assemble: {failed_cnt}/{tests_cnt}')
-    summary.append(f'Average identity: {identity_sum/assembled_cnt}')
+    summary.append('Average identity: %f' %
+                   (identity_sum/assembled_cnt if assembled_cnt > 0 else 0))
     print('\n'.join(summary))
 
 
