@@ -40,6 +40,9 @@ def create_parser():
     parser.add_argument('--summary', dest='summary', action='store_true',
                         help='Show only summary of testing')
     parser.set_defaults(summary=False)
+    parser.add_argument('--result', dest='result', action='store_true',
+                        help='Show assembled sequences')
+    parser.set_defaults(summary=False)
     return parser
 
 
@@ -111,6 +114,8 @@ def test():
                     target_fname, result_fname)
             os.remove(result_fname)
             print(f'Identity: {identity}')
+            if args.result:
+                print(f'Result: {result_seq}')
             identity_sum += identity
         except Exception:
             failed_cnt += 1
