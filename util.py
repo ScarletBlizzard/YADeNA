@@ -32,29 +32,26 @@ def compute_identity_of_unaligned(query_fname, subject_fname):
 
 class BAMUtil:
     def __init__(self, ref_fname: str, query_fnames: list[str]):
-        """
-        Name of sorted BAM file to create and index, name of FASTA/FASTQ file
-        containing reference sequence and names of FASTA/FASTQ files
-        containing query sequence which to map onto the
-        given sequence using BWA.
-        """
         with tempfile.NamedTemporaryFile(delete=False) as bam_file:
-            subprocess.run(['bwa', 'index', ref_fname],
-                           stderr=subprocess.DEVNULL,
-                           check=True)
-            subprocess.run(['bwa', 'mem', ref_fname, *query_fnames],
-                           stdout=bam_file,
-                           stderr=subprocess.DEVNULL,
-                           check=True)
+            try:
+                subprocess.check_output(['bwa', 'index', ref_fname],
+                                        stderr=subprocess.STDOUT)
+                subprocess.check_output(['bwa', 'mem', ref_fname,
+                                         '-o', bam_file.name, *query_fnames],
+                                        stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as e:
+                exit(e.output.decode('ascii'))
             self._bam_fname = bam_file.name
         pysam.sort('-o', self._bam_fname, self._bam_fname)
         pysam.index(self._bam_fname)
         ref_record = next(SeqIO.parse(ref_fname, 'fasta'))
         self._ref_id = ref_record.id
-        self._ref = ref_record.seq
+        self._ref_seq = ref_record.seq
 
     @classmethod
     def from_ref_str(cls, ref_seq: str, ref_id: str, query_fnames: list[str]):
+        if not ref_seq:
+            raise ValueError('ref_seq must be a str of non-zero length')
         ref_fname = ''
         with tempfile.NamedTemporaryFile(delete=False, mode='w') as ref_file:
             SeqIO.write([SeqRecord(seq=Seq(ref_seq), id=ref_id)],
@@ -75,8 +72,8 @@ class BAMUtil:
 
     def consensus(self, start=0, end=None):
         if end is None:
-            end = len(self._ref)-1
-        consensus_seq = ['']*len(self._ref)
+            end = len(self._ref_seq)-1
+        consensus_seq = ['']*len(self._ref_seq)
 
         with pysam.AlignmentFile(self._bam_fname, 'rb') as bam_file:
             nucleotide_counter = Counter()
@@ -98,13 +95,13 @@ class BAMUtil:
 
         for i in range(len(consensus_seq)):
             if not consensus_seq[i]:
-                consensus_seq[i] = self._ref[i]
+                consensus_seq[i] = self._ref_seq[i]
 
         return ''.join(consensus_seq)
 
     def fetch_alignments(self, start=0, end=None) -> Alignments:
         if end is None:
-            end = len(self._ref)
+            end = len(self._ref_seq)
 
         alignments = {}
         with pysam.AlignmentFile(self._bam_fname, 'rb') as bam_file:

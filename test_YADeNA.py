@@ -79,17 +79,18 @@ def test():
             continue
         tests_cnt += 1
 
-        if not args.summary:
-            print(' | '.join((f'[Read length: {read_len}',
-                              f'Sequence length: {seq_len}]')))
-
         data_dir_path = os.path.join(os.path.dirname(__file__),
                                      args.test_data_dir, data_dir)
+        ref_fname = f'{data_dir_path}/ref.fa'
+        ref_id = next(SeqIO.parse(ref_fname, 'fasta')).id
         target_fname = f'{data_dir_path}/target.fa'
-
+        if not args.summary:
+            print(' | '.join((f'[ {ref_id}',
+                              f'Read length: {read_len}',
+                              f'Sequence length: {seq_len} ]')))
         try:
             result_seq = YADeNA.main({
-                'reference': target_fname,
+                'reference': ref_fname,
                 'minid': args.minid,
                 'reads1': f'{data_dir_path}/dat1.fq',
                 'reads2': f'{data_dir_path}/dat2.fq',

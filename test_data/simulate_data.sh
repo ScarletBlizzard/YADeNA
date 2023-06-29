@@ -19,7 +19,7 @@ log_file=log.txt
 err_file=err.txt
 # gap_len is length of gap in sequence which is going to be filled by assembler
 rm $log_file $err_file
-for target_seq_len in `seq 1000 1000 9000`; do
+for target_seq_len in `seq 200 100 1000`; do
   max_pos=$(($ref_seq_len-$target_seq_len)) # maximum starting position of target sequence
   pos="$(shuf -i 0-"$max_pos" -n 1)" # random starting position of target sequence
   target_seq=${ref_seq:pos:target_seq_len}
@@ -28,6 +28,7 @@ for target_seq_len in `seq 1000 1000 9000`; do
   target_file=${target_dir}/target.fa # file containing target sequence
   echo ${ref_id}_${target_seq_len}_${pos} > $target_file
   echo $target_seq >> $target_file
+  cat $target_file > ${target_dir}/ref.fa # reference matches target
 
   art_illumina -ss ${seq_system} -sam -i ${target_file} -p -l ${read_len} -f ${fold_cov} -m ${mean_fragsize} -s ${std_fragsize} -o ${target_dir}/dat >> log.txt 2>>err.txt
 done

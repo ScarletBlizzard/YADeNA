@@ -89,17 +89,23 @@ def find_gaps(bam_util, seq, read_len, min_avg_identity):
     return gaps
 
 
-def get_contigs(gaps, consensus_seq):
-    if gaps:
-        contigs = []
-        if gaps[0][0] != 0:  # starting with a contig
-            contigs.append(consensus_seq[0:gaps[0][0]])
-        for i in range(1, len(gaps)):
-            contigs.append(consensus_seq[gaps[i-1][1]+1:gaps[i][0]])
-        if gaps[-1][1] != len(consensus_seq)-1:  # ending with a contig
-            contigs.append(consensus_seq[gaps[-1][1]+1:len(consensus_seq)])
-        return contigs
-    return [consensus_seq]
+def get_diff_segments(segments, end):
+    diff = []
+    if segments:
+        if segments[0][0] != 0:
+            diff.append((0, segments[0][0]-1))
+        for i in range(1, len(segments)):
+            diff.append((segments[i-1][1]+1, segments[i][0]-1))
+        if segments[-1][1] != end:
+            diff.append((segments[-1][1]+1, end))
+    return diff
+
+
+def get_contigs(contig_segments, consensus_seq):
+    contigs = []
+    for seg in contig_segments:
+        contigs.append(consensus_seq[seg[0]:seg[1]+1])
+    return contigs
 
 
 def get_reads_with_positions(alignments: Alignments):
@@ -125,9 +131,11 @@ def main(args):
         consensus_seq = bam_util.consensus()
         gaps = find_gaps(
                 bam_util, consensus_seq, read_len, args['minid']/100)
-        contigs = get_contigs(gaps, consensus_seq)
         if not gaps:
-            return contigs[0]
+            return consensus_seq
+
+        contig_segments = get_diff_segments(gaps, len(consensus_seq)-1)
+        contigs = get_contigs(contig_segments, consensus_seq)
         if not contigs:
             raise CommandArgumentsError(
                     ('Cannot assemble sequence with given '
@@ -147,7 +155,8 @@ def main(args):
                         reads, read_positions, read_len,
                         {read_id: reads[read_id],
                          contig_ids[1]: contigs[0]},
-                        (read_positions[read_id], gaps[0][1]+1),
+                        (read_positions[read_id],
+                         contig_segments[0][0]),
                         min_overlap_len, visualize,
                         '%s_%d_%d' % (ref_id, *gaps[0]))
                 part = assembler.assemble()
@@ -158,19 +167,23 @@ def main(args):
         # Filling inner gaps
         for i in range(start_inner_idx, len(gaps)):
             # Checking if there is no right_contig contig (ending with a gap)
-            if i+1-start_inner_idx > len(contigs)-1:
+            contig_idx = i-start_inner_idx
+            if contig_idx+1 > len(contigs)-1:
                 break
-            cutoff_len = 0 if not seq else len(contigs[i-start_inner_idx])
             alignments = bam_util.fetch_alignments(*gaps[i])
             reads, read_positions = get_reads_with_positions(alignments)
             assembler = Assembler(
                     reads, read_positions, read_len,
-                    {contig_ids[0]: contigs[i-start_inner_idx],
-                     contig_ids[1]: contigs[i+1-start_inner_idx]},
-                    (gaps[i][0]-1, gaps[i][1]+1),
+                    {contig_ids[0]: contigs[contig_idx],
+                     contig_ids[1]: contigs[contig_idx+1]},
+                    (contig_segments[contig_idx-1][0],
+                     contig_segments[contig_idx][0]),
                     min_overlap_len, visualize,
                     '%s_%d_%d' % (ref_id, *gaps[i]))
-            seq.append(assembler.assemble()[cutoff_len:])
+            seq.append(contigs[contig_idx])
+            seq.append(assembler.assemble())
+
+        seq.append(contigs[-1])
 
         if gaps[-1][1] == ref_len-1:  # ending with a gap
             alignments = bam_util.fetch_alignments(*gaps[-1])
@@ -180,12 +193,13 @@ def main(args):
                         reads, read_positions, read_len,
                         {contig_ids[0]: contigs[-1],
                          read_id: reads[read_id]},
-                        (gaps[-1][0]-1, read_positions[read_id]),
+                        (contig_segments[-1][0],
+                         read_positions[read_id]),
                         min_overlap_len, visualize,
                         '%s_%d_%d' % (ref_id, *gaps[-1]))
                 part = assembler.assemble()
                 if part:
-                    seq.append(part[:len(contigs[-1])])
+                    seq.append(part)
                     break
 
     with BAMUtil.from_ref_str(
