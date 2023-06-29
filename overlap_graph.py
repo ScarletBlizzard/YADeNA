@@ -51,12 +51,15 @@ class GraphVisualizer:
         self._add_node(child_id)
         self._add_edge(parent_id, child_id, label)
 
-    def mark(self, parent_id: str, child_id=None, label=None):
+    def mark_node(self, node_id: str):
         self._graph_renderer.node(
-                parent_id, parent_id, style='filled',
+                node_id, node_id, style='filled',
                 color=self._mark_color, fontcolor='white',
                 fontname=f'{self._font}-bold',
-                xlabel=self._get_label(parent_id, self._mark_color))
+                xlabel=self._get_label(node_id, self._mark_color))
+
+    def mark_connection(self, parent_id: str, child_id=None, label=None):
+        self.mark_node(parent_id)
         if child_id and label:
             self._graph_renderer.edge(
                     parent_id, child_id, label,
@@ -65,3 +68,6 @@ class GraphVisualizer:
 
     def render(self):
         self._graph_renderer.render(self._name, view=False)
+
+    def empty(self):
+        self._graph_renderer = graphviz.Digraph(self._name, strict=True)
