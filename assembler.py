@@ -27,8 +27,7 @@ class Assembler:
         self._graph_name = graph_name  # For debug
 
     def assemble(self):
-        min_min_overlap_len = self._min_overlap_len // 5
-        while True and self._min_overlap_len > min_min_overlap_len:
+        while True and self._min_overlap_len > 0:
             self._create_overlap_graph()
             if self._visualizer:
                 for cid in self._contig_ids:
